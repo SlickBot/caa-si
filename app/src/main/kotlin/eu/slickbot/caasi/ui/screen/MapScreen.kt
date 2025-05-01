@@ -54,9 +54,9 @@ fun MapScreen(
   }
 
   val layers by vm.layers.collectAsState()
-  val selectedLayers by vm.selectedLayers.collectAsState()
+  val selectedLayers by vm.selectedLayers.collectAsState(emptyList())
   val mapTypes by vm.mapTypes.collectAsState()
-  val selectedMapType by vm.selectedMapType.collectAsState()
+  val selectedMapType by vm.selectedMapType.collectAsState(MapType.NORMAL)
   val allFeatures by vm.allFeatures.collectAsState(initial = emptyList())
   val isLoading by vm.isLoading.collectAsState(initial = false)
 
@@ -130,7 +130,10 @@ private fun Content(
         modifier = Modifier.align(Alignment.TopStart),
       ) {
         LinearLoader(show = isLoading)
-        DebugConsole(cameraPositionState = cameraPositionState)
+        DebugConsole(
+          modifier = Modifier.padding(top = 10.dp, start = 16.dp),
+          cameraPositionState = cameraPositionState,
+        )
       }
       Column(
         modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),

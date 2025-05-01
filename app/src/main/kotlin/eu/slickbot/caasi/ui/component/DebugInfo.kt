@@ -7,9 +7,12 @@ import androidx.compose.ui.Modifier
 import com.google.maps.android.compose.CameraPositionState
 
 @Composable
-fun DebugConsole(cameraPositionState: CameraPositionState) {
+fun DebugConsole(
+  cameraPositionState: CameraPositionState,
+  modifier: Modifier = Modifier,
+) {
   Text(
-    modifier = Modifier.fillMaxWidth(),
+    modifier = modifier.fillMaxWidth(),
     text = """
       LAT = ${cameraPositionState.position.target.latitude}
       LNG = ${cameraPositionState.position.target.longitude}

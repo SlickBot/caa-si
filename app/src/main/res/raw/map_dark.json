@@ -24,6 +24,15 @@
     ]
   },
   {
+    "featureType": "administrative.country",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      { "visibility": "on" },
+      { "color": "#5f5f5f" },
+      { "weight": 1.5 }
+    ]
+  },
+  {
     "featureType": "administrative.land_parcel",
     "elementType": "labels",
     "stylers": [
@@ -34,11 +43,9 @@
   },
   {
     "featureType": "administrative.locality",
-    "elementType": "labels.text.fill",
+    "elementType": "labels",
     "stylers": [
-      {
-        "color": "#d59563"
-      }
+      { "visibility": "on" }
     ]
   },
   {

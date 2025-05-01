@@ -2,20 +2,47 @@ package eu.slickbot.caasi.utils
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.supervisorScope
+import java.util.concurrent.CancellationException
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 fun <T> takeIf(condition: Boolean, function: () -> T?): T? {
   return if (condition) function() else null
 }
 
 suspend fun <T, R> Iterable<T>.asyncMap(transform: suspend (T) -> R): List<R> {
-  return coroutineScope {
+  return supervisorScope {
     map { async { transform(it) } }.awaitAll()
   }
 }
 
 suspend fun <T, R> Iterable<T>.asyncFlatMap(transform: suspend (T) -> Iterable<R>): List<R> {
-  return coroutineScope {
+  return supervisorScope {
     map { async { transform(it) } }.awaitAll().flatten()
   }
+}
+
+@OptIn(ExperimentalContracts::class)
+inline fun <R, T> Result<T>.foldSafe(
+  onSuccess: (value: T) -> R,
+  onFailure: (exception: Throwable) -> R,
+): R {
+  contract {
+    callsInPlace(onSuccess, InvocationKind.AT_MOST_ONCE)
+    callsInPlace(onFailure, InvocationKind.AT_MOST_ONCE)
+  }
+  return fold(
+    onSuccess = { value ->
+      onSuccess(value)
+    },
+    onFailure = { exception ->
+      if (exception is CancellationException) {
+        throw exception
+      } else {
+        onFailure(exception)
+      }
+    },
+  )
 }

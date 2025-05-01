@@ -1,11 +1,15 @@
 package eu.slickbot.caasi.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.activity.compose.LocalActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import eu.slickbot.caasi.utils.isAppInDarkTheme
 
 private val DarkColorScheme = darkColorScheme(
   primary = mdPrimary,
@@ -73,21 +77,18 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun CaaSiTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
-//  dynamicColor: Boolean = false,
+  darkTheme: Boolean = isAppInDarkTheme(),
   content: @Composable () -> Unit,
 ) {
-  val colorScheme = when {
-//    dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-//      val context = LocalContext.current
-//      if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-//    }
-    darkTheme -> DarkColorScheme
-    else -> LightColorScheme
+  val window = LocalActivity.current?.window ?: return
+  val view = LocalView.current
+  LaunchedEffect(darkTheme) {
+    WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+    WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
   }
 
   MaterialTheme(
-    colorScheme = colorScheme,
+    colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
     typography = Typography,
     content = content,
   )

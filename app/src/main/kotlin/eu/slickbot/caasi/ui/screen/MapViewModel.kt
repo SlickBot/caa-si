@@ -5,22 +5,24 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.MapType
-import eu.slickbot.caasi.data.api.CaaSiApi
 import eu.slickbot.caasi.data.api.model.Layer
 import eu.slickbot.caasi.data.api.model.LayerFeature
-import eu.slickbot.caasi.utils.asyncFlatMap
-import kotlinx.coroutines.Dispatchers
+import eu.slickbot.caasi.data.repo.CaaSiRepository
+import eu.slickbot.caasi.utils.foldSafe
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MapViewModel(
-  private val api: CaaSiApi,
+  private val repo: CaaSiRepository,
 ) : ViewModel() {
 
   private val _isLoadingLayers = MutableStateFlow(false)
@@ -41,14 +43,14 @@ class MapViewModel(
   private val _layers = MutableStateFlow<List<Layer>>(emptyList())
   val layers = _layers.asStateFlow()
 
-  private val _selectedLayers = MutableStateFlow<List<Layer>>(emptyList())
-  val selectedLayers = _selectedLayers.asStateFlow()
+  @OptIn(ExperimentalCoroutinesApi::class)
+  val selectedLayers: Flow<List<Layer>>
+    get() = _layers.flatMapMerge { repo.getSelectedLayers(it) }
 
   private val _mapTypes = MutableStateFlow<List<MapType>>(emptyList())
   val mapTypes = _mapTypes.asStateFlow()
 
-  private val _selectedMapType = MutableStateFlow<MapType>(MapType.NORMAL)
-  val selectedMapType = _selectedMapType.asStateFlow()
+  val selectedMapType = repo.getSelectedMapType()
 
   private val _featuresBuilt = MutableStateFlow<List<LayerFeature>>(emptyList())
   val featuresBuilt = _featuresBuilt.asStateFlow()
@@ -64,58 +66,56 @@ class MapViewModel(
   private val _toastEvents = Channel<ToastEvent>()
   val toastEvents = _toastEvents.receiveAsFlow()
 
+  private var layersJob: Job? = null
+  private var featuresBuiltJob: Job? = null
+  private var featuresOtherJob: Job? = null
+
   fun loadLayers() {
-    viewModelScope.launch {
+    layersJob?.cancel()
+    layersJob = viewModelScope.launch {
       _isLoadingLayers.value = true
-      withContext(Dispatchers.IO) {
-        runCatching { api.getLayers() }.fold(
-          onSuccess = { layers ->
-            _layers.value = layers
-            _selectedLayers.value = layers
-          },
-          onFailure = { th ->
-            _toastEvents.send(ToastEvent("Failed to load Layers: ${th.toString()}"))
-          },
-        )
-      }
+      runCatching {
+        repo.getLayers()
+      }.foldSafe(
+        onSuccess = { layers ->
+          _layers.value = layers
+        },
+        onFailure = { th ->
+          _toastEvents.send(ToastEvent("Failed to load Layers: ${th.toString()}"))
+        },
+      )
       _isLoadingLayers.value = false
     }
   }
 
   fun loadMapTypes() {
-    viewModelScope.launch {
-      _mapTypes.value = MapType.entries - MapType.NONE
-    }
+    _mapTypes.value = MapType.entries - MapType.NONE
   }
 
   fun toggleLayer(layer: Layer, enabled: Boolean) {
-    _selectedLayers.value = if (enabled) {
-      _selectedLayers.value + layer
-    } else {
-      _selectedLayers.value - layer
+    viewModelScope.launch {
+      val selectedLayers = if (enabled) {
+        selectedLayers.first() + layer
+      } else {
+        selectedLayers.first() - layer
+      }
+      repo.saveSelectedLayers(selectedLayers)
     }
   }
 
   fun selectMapType(mapType: MapType) {
-    _selectedMapType.value = mapType
+    viewModelScope.launch {
+      repo.saveSelectedMapType(mapType)
+    }
   }
 
   fun loadBuiltFeatures(zoom: Float, bounds: LatLngBounds?) {
-    if (zoom < LAYER_BUILT_ZOOM_THRESHOLD || bounds == null) {
-      _featuresBuilt.value = emptyList()
-      return
-    }
-
-    viewModelScope.launch {
+    featuresBuiltJob?.cancel()
+    featuresBuiltJob = viewModelScope.launch {
       _isLoadingFeaturesBuilt.value = true
       runCatching {
-        val builtLayers = withContext(Dispatchers.Default) {
-          _selectedLayers.value.filter { it.title == LAYER_BUILT_TITLE }
-        }
-        withContext(Dispatchers.IO) {
-          builtLayers.asyncFlatMap { api.getLayerFeatures(it, bounds) }
-        }
-      }.fold(
+        repo.getBuiltFeatures(selectedLayers.first(), bounds, zoom)
+      }.foldSafe(
         onSuccess = { features ->
           _featuresBuilt.value = features
         },
@@ -128,16 +128,12 @@ class MapViewModel(
   }
 
   fun loadOtherFeatures() {
-    viewModelScope.launch {
+    featuresOtherJob?.cancel()
+    featuresOtherJob = viewModelScope.launch {
       _isLoadingFeaturesOther.value = true
       runCatching {
-        val otherLayers = withContext(Dispatchers.Default) {
-          _selectedLayers.value.filter { it.title != LAYER_BUILT_TITLE }
-        }
-        withContext(Dispatchers.IO) {
-          otherLayers.asyncFlatMap { api.getLayerFeatures(it) }
-        }
-      }.fold(
+        repo.getOtherFeatures(selectedLayers.first())
+      }.foldSafe(
         onSuccess = { features ->
           _featuresOther.value = features
         },
@@ -147,11 +143,6 @@ class MapViewModel(
       )
       _isLoadingFeaturesOther.value = false
     }
-  }
-
-  companion object {
-    private const val LAYER_BUILT_ZOOM_THRESHOLD = 12f
-    private const val LAYER_BUILT_TITLE = "Pozidano-built"
   }
 
   data class ToastEvent(
