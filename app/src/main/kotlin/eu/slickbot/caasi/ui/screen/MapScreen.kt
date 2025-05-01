@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -135,11 +137,11 @@ private fun Content(
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
         IconFab(
-          imageVector = Icons.Default.Add,
+          imageVector = Icons.Default.Layers,
           onClick = { scope.launch { layersSheetState.show() } },
         )
         IconFab(
-          imageVector = Icons.Default.Close,
+          imageVector = Icons.Default.Map,
           onClick = { scope.launch { mapTypesSheetState.show() } },
         )
       }
