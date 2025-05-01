@@ -1,9 +1,12 @@
 package eu.slickbot.caasi.data.api
 
+import com.google.android.gms.maps.model.LatLngBounds
 import com.squareup.moshi.Moshi
 import eu.slickbot.caasi.API_BASE_URL
 import eu.slickbot.caasi.API_ID_URL
 import eu.slickbot.caasi.data.api.model.Layer
+import eu.slickbot.caasi.data.api.model.LayerFeature
+import eu.slickbot.caasi.data.api.model.LayerFeaturesResponse
 import eu.slickbot.caasi.data.api.model.LayersResponse
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
@@ -53,82 +56,82 @@ class CaaSiApi(
     return getLayersResponse(itemId).operationalLayers
   }
 
-//    fun getLayerFeaturesResponse(
-//      layer: Layer,
-//      bounds: LatLngBounds? = null,
-//    ): LayerFeaturesResponse {
-//      //
-//      // OperationalLayer.url looks something like this:
-//      // https://services6.arcgis.com/1F2lR3M9nMUYDj5l/arcgis/rest/services/UAS_GEO_ZONES___March_2022_WFL1/FeatureServer/12
-//      //
-//      // append query params:
-//      // .../FeatureServer/12/query?f=geojson&where=1%3D1&returnGeometry=true&spatialRel=esriSpatialRelIntersects&outFields=*&maxRecordCountFactor=2&outSR=102100&resultOffset=0&resultRecordCount=4000
-//      // coordinates are in EPSG:3857, transform them into EPSG:4326
-//      //
-//      // OR
-//      //
-//      // .../FeatureServer/9/query?f=geojson&where=1%3D1&returnGeometry=true&spatialRel=esriSpatialRelIntersects&outFields=*&maxRecordCountFactor=200&resultRecordCount=400000
-//      // coordinates are in already in EPSG:4326
-//      //
-//
-//      // val jsonString = requestString("${layer.url}/query?f=geojson&where=1%3D1&returnGeometry=true&spatialRel=esriSpatialRelIntersects&outFields=*&maxRecordCountFactor=200&resultRecordCount=400000&quantizationParameters={\"mode\":\"view\",\"originPosition\":\"upperLeft\",\"tolerance\":1.0583354500042332,\"extent\":{\"xmin\":1510518.929297328,\"ymin\":5696339.608744907,\"xmax\":1840386.3517350955,\"ymax\":5892155.961049096,\"spatialReference\":{\"wkid\":4326,\"latestWkid\":4326}}}")
-//
-//      val url = if (bounds != null) {
-//        createUrl(
-//          "${layer.url}/query",
-//          "f" to "geojson",
-//          "returnGeometry" to true,
-//          "spatialRel" to "esriSpatialRelIntersects",
-//          "geometryType" to "esriGeometryEnvelope",
-//          "inSR" to 4326,
-//          "outSR" to 4326,
-//          "outFields" to "*",
-//          "returnCentroid" to false,
-//          "resultRecordCount" to 5000,
-//          "maxRecordCountFactor" to 3,
-//          "geometry" to jsonString(
-//            "xmin" to bounds.southwest.longitude,
-//            "ymin" to bounds.southwest.latitude,
-//            "xmax" to bounds.northeast.longitude,
-//            "ymax" to bounds.northeast.latitude,
-//            "spatialReference" to mapOf(
-//              "wkid" to 4326
-//            )
-//          ),
-//          "quantizationParameters" to jsonString(
-//            "mode" to "view",
-//            "originPosition" to "upperLeft",
-//            "extent" to mapOf(
-//              "xmin" to bounds.southwest.longitude,
-//              "ymin" to bounds.southwest.latitude,
-//              "xmax" to bounds.northeast.longitude,
-//              "ymax" to bounds.northeast.latitude,
-//              "spatialReference" to mapOf(
-//                "wkid" to 4326
-//              )
-//            )
-//          )
-//        )
-//      } else {
-//        createUrl(
-//          "${layer.url}/query",
-//          "f" to "geojson",
-//          "where" to "1=1",
-//          "returnGeometry" to true,
-//          "spatialRel" to "esriSpatialRelIntersects",
-//          "inSR" to 4326,
-//          "outSR" to 4326,
-//          "outFields" to "*",
-//          "resultRecordCount" to 1000,
-//          "maxRecordCountFactor" to 200,
-//        )
-//      }
-//      return requestString(url).parseJson()
-//    }
-//
-//  fun getLayerFeatures(layer: Layer, bounds: LatLngBounds? = null): List<LayerFeature> {
-//    return getLayerFeaturesResponse(layer, bounds).features
-//  }
+    fun getLayerFeaturesResponse(
+      layer: Layer,
+      bounds: LatLngBounds? = null,
+    ): LayerFeaturesResponse {
+      //
+      // OperationalLayer.url looks something like this:
+      // https://services6.arcgis.com/1F2lR3M9nMUYDj5l/arcgis/rest/services/UAS_GEO_ZONES___March_2022_WFL1/FeatureServer/12
+      //
+      // append query params:
+      // .../FeatureServer/12/query?f=geojson&where=1%3D1&returnGeometry=true&spatialRel=esriSpatialRelIntersects&outFields=*&maxRecordCountFactor=2&outSR=102100&resultOffset=0&resultRecordCount=4000
+      // coordinates are in EPSG:3857, transform them into EPSG:4326
+      //
+      // OR
+      //
+      // .../FeatureServer/9/query?f=geojson&where=1%3D1&returnGeometry=true&spatialRel=esriSpatialRelIntersects&outFields=*&maxRecordCountFactor=200&resultRecordCount=400000
+      // coordinates are in already in EPSG:4326
+      //
+
+      // val jsonString = requestString("${layer.url}/query?f=geojson&where=1%3D1&returnGeometry=true&spatialRel=esriSpatialRelIntersects&outFields=*&maxRecordCountFactor=200&resultRecordCount=400000&quantizationParameters={\"mode\":\"view\",\"originPosition\":\"upperLeft\",\"tolerance\":1.0583354500042332,\"extent\":{\"xmin\":1510518.929297328,\"ymin\":5696339.608744907,\"xmax\":1840386.3517350955,\"ymax\":5892155.961049096,\"spatialReference\":{\"wkid\":4326,\"latestWkid\":4326}}}")
+
+      val url = if (bounds != null) {
+        createUrl(
+          "${layer.url}/query",
+          "f" to "geojson",
+          "returnGeometry" to true,
+          "spatialRel" to "esriSpatialRelIntersects",
+          "geometryType" to "esriGeometryEnvelope",
+          "inSR" to 4326,
+          "outSR" to 4326,
+          "outFields" to "*",
+          "returnCentroid" to false,
+          "resultRecordCount" to 5000,
+          "maxRecordCountFactor" to 3,
+          "geometry" to jsonString(
+            "xmin" to bounds.southwest.longitude,
+            "ymin" to bounds.southwest.latitude,
+            "xmax" to bounds.northeast.longitude,
+            "ymax" to bounds.northeast.latitude,
+            "spatialReference" to mapOf(
+              "wkid" to 4326
+            )
+          ),
+          "quantizationParameters" to jsonString(
+            "mode" to "view",
+            "originPosition" to "upperLeft",
+            "extent" to mapOf(
+              "xmin" to bounds.southwest.longitude,
+              "ymin" to bounds.southwest.latitude,
+              "xmax" to bounds.northeast.longitude,
+              "ymax" to bounds.northeast.latitude,
+              "spatialReference" to mapOf(
+                "wkid" to 4326
+              )
+            )
+          )
+        )
+      } else {
+        createUrl(
+          "${layer.url}/query",
+          "f" to "geojson",
+          "where" to "1=1",
+          "returnGeometry" to true,
+          "spatialRel" to "esriSpatialRelIntersects",
+          "inSR" to 4326,
+          "outSR" to 4326,
+          "outFields" to "*",
+          "resultRecordCount" to 1000,
+          "maxRecordCountFactor" to 200,
+        )
+      }
+      return requestString(url).parseJson()
+    }
+
+  fun getLayerFeatures(layer: Layer, bounds: LatLngBounds? = null): List<LayerFeature> {
+    return getLayerFeaturesResponse(layer, bounds).features
+  }
 
   /*
    * Helpers

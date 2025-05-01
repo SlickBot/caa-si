@@ -5,12 +5,12 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class Outline(
-    @Json(name = "color")
-    val color: List<Int>,
-    @Json(name = "style")
-    val style: String,
-    @Json(name = "type")
-    val type: String,
-    @Json(name = "width")
-    val width: Double,
+  @Json(name = "color")
+  val color: List<Int>,
+  @Json(name = "style")
+  val style: String,
+  @Json(name = "type")
+  val type: String,
+  @Json(name = "width")
+  val width: Double,
 )

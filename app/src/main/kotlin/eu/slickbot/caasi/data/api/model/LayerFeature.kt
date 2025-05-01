@@ -1,5 +1,6 @@
 package eu.slickbot.caasi.data.api.model
 
+import androidx.compose.ui.graphics.Color
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
@@ -40,10 +41,12 @@ data class LayerFeature(
   val remarkSi = firstProperty("Opomba")
   val remarkEn = firstProperty("Remark")
 
+  val color = Color((fid ?: id).hashCode() % 0xFFFFFF).copy(.4f)
+
   private fun firstProperty(vararg names: String, trim: Boolean = true): String? {
     return names
-      .first { properties[it] != null }
-      .let { if (trim) it.trim() else it }
+      .find { properties[it] != null }
+      .let { if (trim) it?.trim() else it }
   }
 
 }
