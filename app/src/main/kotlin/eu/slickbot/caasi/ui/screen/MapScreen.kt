@@ -1,5 +1,6 @@
 package eu.slickbot.caasi.ui.screen
 
+import android.location.Location
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
@@ -8,9 +9,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.LocationDisabled
+import androidx.compose.material.icons.filled.LocationSearching
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -19,15 +20,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.MapType
+import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.Polygon
 import com.google.maps.android.compose.Polyline
+import com.google.maps.android.compose.rememberUpdatedMarkerState
 import eu.slickbot.caasi.data.api.model.Layer
 import eu.slickbot.caasi.data.api.model.LayerFeature
 import eu.slickbot.caasi.ui.component.DebugConsole
@@ -36,7 +47,14 @@ import eu.slickbot.caasi.ui.component.LinearLoader
 import eu.slickbot.caasi.ui.component.bottomsheet.LayersSheet
 import eu.slickbot.caasi.ui.component.bottomsheet.MapTypesSheet
 import eu.slickbot.caasi.ui.component.map.Map
+import eu.slickbot.caasi.ui.component.map.animateTo
 import eu.slickbot.caasi.ui.component.map.rememberCameraPositionState
+import eu.slickbot.caasi.utils.bitmapDescriptor
+import eu.slickbot.caasi.utils.rememberFusedLocationProviderClient
+import eu.slickbot.caasi.utils.rememberLocationCallback
+import eu.slickbot.caasi.utils.rememberLocationPermissions
+import eu.slickbot.caasi.utils.startLocationRequest
+import eu.slickbot.caasi.utils.toLatLng
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -79,7 +97,7 @@ fun MapScreen(
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 private fun Content(
   contentPadding: PaddingValues,
@@ -121,6 +139,32 @@ private fun Content(
     loadBuiltFeatures(zoom, bounds)
   }
 
+  val context = LocalContext.current
+  var lastLocation by remember { mutableStateOf<Location?>(null) }
+  val locationCallback = rememberLocationCallback { lastLocation = it.lastLocation }
+  val locationProvider = rememberFusedLocationProviderClient()
+  val permissionsState = rememberLocationPermissions()
+
+  LaunchedEffect(permissionsState.allPermissionsGranted) {
+    if (permissionsState.allPermissionsGranted) {
+      context.startLocationRequest(locationProvider, locationCallback)
+    } else {
+      permissionsState.launchMultiplePermissionRequest()
+    }
+  }
+
+  fun onLocationClick() {
+    scope.launch {
+      if (permissionsState.allPermissionsGranted) {
+        lastLocation?.let { location ->
+          cameraPositionState.animateTo(location.toLatLng(), 14f)
+        }
+      } else {
+        permissionsState.launchMultiplePermissionRequest()
+      }
+    }
+  }
+
   Map(
     contentPadding = contentPadding,
     cameraPositionState = cameraPositionState,
@@ -136,7 +180,7 @@ private fun Content(
         )
       }
       Column(
-        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+        modifier = Modifier.align(Alignment.BottomStart).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
         IconFab(
@@ -148,8 +192,18 @@ private fun Content(
           onClick = { scope.launch { mapTypesSheetState.show() } },
         )
       }
+      Column(
+        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+      ) {
+        IconFab(
+          imageVector = if (lastLocation != null) Icons.Default.LocationSearching else Icons.Default.LocationDisabled,
+          onClick = ::onLocationClick,
+        )
+      }
     },
     mapContent = {
+      UserLocation(lastLocation)
       for (feature in allFeatures) {
         FeaturePolygons(feature)
         FeaturePolyline(feature)
@@ -174,6 +228,26 @@ private fun Content(
   )
 }
 
+@Composable
+private fun UserLocation(location: Location?) {
+  val latLng = remember(location) { location?.toLatLng() }
+  val radius = remember(location) { location?.accuracy?.toDouble() }
+  if (latLng != null) {
+    Marker(
+      state = rememberUpdatedMarkerState(latLng),
+      icon = bitmapDescriptor(android.R.drawable.star_big_on),
+      anchor = Offset(0.5f, 0.5f),
+    )
+    if (radius != null) {
+      Circle(
+        center = latLng,
+        radius = radius,
+        strokeColor = Color.Red,
+        strokeWidth = 3f,
+      )
+    }
+  }
+}
 
 @Composable
 private fun FeaturePolygons(

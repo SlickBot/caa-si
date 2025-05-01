@@ -44,7 +44,7 @@ android {
 }
 
 dependencies {
-  // Android
+  // Android & Compose
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
@@ -56,6 +56,9 @@ dependencies {
   implementation(libs.androidx.material.icons.extended)
   debugImplementation(libs.androidx.ui.tooling)
   debugImplementation(libs.androidx.ui.test.manifest)
+
+  // Permissions
+  implementation(libs.accompanist.permissions)
 
   // Koin
   implementation(libs.koin.compose)
@@ -81,8 +84,11 @@ dependencies {
   implementation(libs.moshi.adapters)
   ksp(libs.moshi.codegen)
 
-  // Google maps
+  // Google play services
+  implementation(libs.play.services.location)
   implementation(libs.play.services.maps)
+
+  // Google maps
   implementation(libs.maps.compose)
   implementation(libs.maps.compose.utils)
   implementation(libs.maps.compose.widgets)
