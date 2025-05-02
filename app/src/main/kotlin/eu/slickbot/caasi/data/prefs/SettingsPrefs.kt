@@ -15,9 +15,9 @@ class SettingsPrefs(
 
   private val Context.dataStore by preferencesDataStore(name = "map_settings")
 
-  val selectedLayerIdsFlow: Flow<Set<String>?> =
+  val layersFlow: Flow<Set<String>?> =
     context.dataStore.data.map {
-      it[Keys.SELECTED_LAYERS]
+      it[Keys.LAYERS]
     }
 
   val mapTypesFlow: Flow<String> =
@@ -25,20 +25,20 @@ class SettingsPrefs(
       it[Keys.MAP_TYPE] ?: MapType.NORMAL.name
     }
 
-  suspend fun saveSelectedLayerIds(ids: Set<String>) {
+  suspend fun saveLayers(ids: Set<String>) {
     context.dataStore.edit {
-      it[Keys.SELECTED_LAYERS] = ids
+      it[Keys.LAYERS] = ids
     }
   }
 
-  suspend fun saveMapTypeId(id: String) {
+  suspend fun saveMapType(id: String) {
     context.dataStore.edit {
       it[Keys.MAP_TYPE] = id
     }
   }
 
   private object Keys {
-    val SELECTED_LAYERS = stringSetPreferencesKey("selected_layers")
+    val LAYERS = stringSetPreferencesKey("layers")
     val MAP_TYPE = stringPreferencesKey("map_type")
   }
 

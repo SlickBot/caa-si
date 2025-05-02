@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.MapType
@@ -39,6 +38,8 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.Polygon
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberUpdatedMarkerState
+import eu.slickbot.caasi.DEFAULT_CAMERA_LOCATION
+import eu.slickbot.caasi.DEFAULT_CAMERA_ZOOM
 import eu.slickbot.caasi.data.api.model.Layer
 import eu.slickbot.caasi.data.api.model.LayerFeature
 import eu.slickbot.caasi.ui.component.DebugConsole
@@ -116,8 +117,8 @@ private fun Content(
 ) {
   val scope = rememberCoroutineScope()
   val cameraPositionState = rememberCameraPositionState(
-    latLng = LatLng(45.90136720, 15.026461780),
-    zoom = 7.3f,
+    latLng = DEFAULT_CAMERA_LOCATION,
+    zoom = DEFAULT_CAMERA_ZOOM,
   )
 
   val layersSheetState = rememberModalBottomSheetState()

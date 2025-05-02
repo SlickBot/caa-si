@@ -50,7 +50,7 @@ class CaaSiRepository(
   }
 
   fun getSelectedLayers(allLayers: List<Layer>): Flow<List<Layer>> {
-    return settingsPrefs.selectedLayerIdsFlow.map { selected ->
+    return settingsPrefs.layersFlow.map { selected ->
       if (selected == null) {
         allLayers.filter { it.title != LAYER_BORDER_TITLE }
       } else {
@@ -61,7 +61,7 @@ class CaaSiRepository(
 
   suspend fun saveSelectedLayers(layers: List<Layer>) {
     val ids = withContext(Dispatchers.Default) { layers.map { it.id }.toSet() }
-    return settingsPrefs.saveSelectedLayerIds(ids)
+    return settingsPrefs.saveLayers(ids)
   }
 
   fun getSelectedMapType(): Flow<MapType> {
@@ -69,7 +69,7 @@ class CaaSiRepository(
   }
 
   suspend fun saveSelectedMapType(mapType: MapType) {
-    return settingsPrefs.saveMapTypeId(mapType.name)
+    return settingsPrefs.saveMapType(mapType.name)
   }
 
   companion object {
