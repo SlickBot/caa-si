@@ -14,14 +14,14 @@ class CaaSiApiTest {
   fun is_base_id_same() {
     val baseId = api.getBaseId()
     println("baseId = $baseId")
-    assert(baseId == CaaSiApi.Companion.DEFAULT_BASE_ID)
+    assert(baseId == CaaSiApi.DEFAULT_BASE_ID)
   }
 
   @Test
   fun is_item_id_same() {
     val itemId = api.getItemId()
     println("itemId = $itemId")
-    assert(itemId == CaaSiApi.Companion.DEFAULT_ITEM_ID)
+    assert(itemId == CaaSiApi.DEFAULT_ITEM_ID)
   }
 
   @Test
@@ -61,7 +61,7 @@ class CaaSiApiTest {
 
     for (layer in layers) {
       println(layer.title)
-      for (info in layer.popupInfo.fieldInfos) {
+      for (info in layer.popupInfo?.fieldInfos ?: emptyList()) {
         println("\t${info.fieldName}")
         println("\t\t\"${info.label}\"")
       }

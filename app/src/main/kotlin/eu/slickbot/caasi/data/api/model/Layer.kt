@@ -5,11 +5,11 @@ import com.squareup.moshi.JsonClass
 @JsonClass(generateAdapter = true)
 data class Layer(
   val id: String,
-  val itemId: String,
+  val itemId: String? = null,
   val title: String,
-  val url: String,
-  val popupInfo: PopupInfo,
-  val layerDefinition: LayerDefinition?,
+  val url: String? = null,
+  val popupInfo: PopupInfo? = null,
+  val layerDefinition: LayerDefinition? = null,
 
 //    @Json(name = "blendMode")
 //    val blendMode: String?,

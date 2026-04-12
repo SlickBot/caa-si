@@ -54,12 +54,14 @@ class CaaSiApi(
 
   fun getLayers(itemId: String = getItemId()): List<Layer> {
     return getLayersResponse(itemId).operationalLayers
+      .filter { it.url != null }
   }
 
     fun getLayerFeaturesResponse(
       layer: Layer,
       bounds: LatLngBounds? = null,
     ): LayerFeaturesResponse {
+      val layerUrl = requireNotNull(layer.url) { "Layer '${layer.title}' has no URL" }
       //
       // OperationalLayer.url looks something like this:
       // https://services6.arcgis.com/1F2lR3M9nMUYDj5l/arcgis/rest/services/UAS_GEO_ZONES___March_2022_WFL1/FeatureServer/12
@@ -78,7 +80,7 @@ class CaaSiApi(
 
       val url = if (bounds != null) {
         createUrl(
-          "${layer.url}/query",
+          "${layerUrl}/query",
           "f" to "geojson",
           "returnGeometry" to true,
           "spatialRel" to "esriSpatialRelIntersects",
@@ -114,7 +116,7 @@ class CaaSiApi(
         )
       } else {
         createUrl(
-          "${layer.url}/query",
+          "${layerUrl}/query",
           "f" to "geojson",
           "where" to "1=1",
           "returnGeometry" to true,
@@ -165,7 +167,7 @@ class CaaSiApi(
   }
 
   private fun requestString(url: String): String {
-    return request(url).body!!.string()
+    return request(url).body.string()
   }
 
   private fun jsonString(vararg pairs: Pair<String, Any>): String {
