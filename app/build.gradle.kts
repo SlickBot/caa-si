@@ -1,20 +1,21 @@
+import com.android.build.api.dsl.ApplicationExtension
+
 plugins {
   alias(libs.plugins.android.application)
-  alias(libs.plugins.kotlin.android)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.ksp)
   alias(libs.plugins.google.maps.secrets)
 }
 
-android {
+configure<ApplicationExtension> {
   namespace = "eu.slickbot.caasi"
 
   defaultConfig {
     applicationId = namespace
 
     minSdk = 26
-    targetSdk = 35
-    compileSdk = 35
+    targetSdk = 36
+    compileSdk = 36
 
     versionCode = 1
     versionName = "1.0"
@@ -25,7 +26,16 @@ android {
   buildTypes {
     release {
       isMinifyEnabled = false
-      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      proguardFiles(
+        getDefaultProguardFile("proguard-android-optimize.txt"),
+        "proguard-rules.pro"
+      )
+      applicationIdSuffix = ".release"
+      resValue("string", "app_name", "CaaSI")
+    }
+    debug {
+      applicationIdSuffix = ".debug"
+      resValue("string", "app_name", "CaaSI🐛")
     }
   }
 
@@ -33,14 +43,16 @@ android {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
   }
-  kotlinOptions {
-    jvmTarget = "11"
-  }
 
   buildFeatures {
     compose = true
     buildConfig = true
+    resValues = true
   }
+}
+
+kotlin {
+  jvmToolchain(11)
 }
 
 dependencies {
