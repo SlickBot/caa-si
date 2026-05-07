@@ -25,51 +25,53 @@ import eu.slickbot.caasi.data.api.model.Layer
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LayersSheet(
+  show: Boolean,
   sheetState: SheetState,
   layers: List<Layer>,
   selectedLayers: List<Layer>,
   onLayerToggled: (Layer, Boolean) -> Unit,
   onDismissRequest: () -> Unit,
 ) {
-  if (sheetState.isVisible) {
-    ModalBottomSheet(
-      onDismissRequest = onDismissRequest,
-      sheetState = sheetState,
+  if (!show) return
+  ModalBottomSheet(
+    onDismissRequest = onDismissRequest,
+    sheetState = sheetState,
+    dragHandle = null,
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp)
     ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(16.dp)
+      SimpleDragHandle(modifier = Modifier.align(Alignment.CenterHorizontally))
+      Text(
+        text = "Select Active Layers",
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
+      )
+      LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
       ) {
-        Text(
-          text = "Select Active Layers",
-          style = MaterialTheme.typography.titleLarge,
-          modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
-        )
-        LazyColumn(
-          modifier = Modifier.fillMaxWidth(),
-          verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-          items(layers) { layer ->
-            val isChecked = layer in selectedLayers
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onLayerToggled(layer, !isChecked) }
-            ) {
-              Checkbox(
-                checked = isChecked,
-                onCheckedChange = { checked ->
-                  onLayerToggled(layer, checked)
-                }
-              )
-              Spacer(Modifier.width(8.dp))
-              Text(
-                text = layer.title,
-                style = MaterialTheme.typography.bodyLarge,
-              )
-            }
+        items(layers) { layer ->
+          val isChecked = layer in selectedLayers
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable { onLayerToggled(layer, !isChecked) }
+          ) {
+            Checkbox(
+              checked = isChecked,
+              onCheckedChange = { checked ->
+                onLayerToggled(layer, checked)
+              }
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+              text = layer.title,
+              style = MaterialTheme.typography.bodyLarge,
+            )
           }
         }
       }

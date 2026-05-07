@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LocationDisabled
 import androidx.compose.material.icons.filled.LocationSearching
@@ -19,10 +21,12 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +49,8 @@ import eu.slickbot.caasi.data.api.model.LayerFeature
 import eu.slickbot.caasi.ui.component.DebugConsole
 import eu.slickbot.caasi.ui.component.IconFab
 import eu.slickbot.caasi.ui.component.LinearLoader
+import eu.slickbot.caasi.ui.component.SpeedDialFab
+import eu.slickbot.caasi.ui.component.SpeedDialItem
 import eu.slickbot.caasi.ui.component.bottomsheet.LayersSheet
 import eu.slickbot.caasi.ui.component.bottomsheet.MapTypesSheet
 import eu.slickbot.caasi.ui.component.map.Map
@@ -78,6 +84,7 @@ fun MapScreen(
   val selectedMapType by vm.selectedMapType.collectAsState(MapType.NORMAL)
   val allFeatures by vm.allFeatures.collectAsState(initial = emptyList())
   val isLoading by vm.isLoading.collectAsState(initial = false)
+  val isDebugVisible by vm.isDebugVisible.collectAsState()
 
   Scaffold(modifier = Modifier.fillMaxSize()) { contentPadding ->
     Content(
@@ -90,6 +97,8 @@ fun MapScreen(
       selectMapType = vm::selectMapType,
       allFeatures = allFeatures,
       isLoading = isLoading,
+      isDebugVisible = isDebugVisible,
+      toggleDebug = vm::toggleDebug,
       loadLayers = vm::loadLayers,
       loadMapTypes = vm::loadMapTypes,
       loadOtherFeatures = vm::loadOtherFeatures,
@@ -110,6 +119,8 @@ private fun Content(
   selectMapType: (MapType) -> Unit,
   allFeatures: List<LayerFeature>,
   isLoading: Boolean,
+  isDebugVisible: Boolean,
+  toggleDebug: () -> Unit,
   loadLayers: () -> Unit,
   loadMapTypes: () -> Unit,
   loadOtherFeatures: () -> Unit,
@@ -123,6 +134,20 @@ private fun Content(
 
   val layersSheetState = rememberModalBottomSheetState()
   val mapTypesSheetState = rememberModalBottomSheetState()
+  var showLayersSheet by remember { mutableStateOf(false) }
+  var showMapTypesSheet by remember { mutableStateOf(false) }
+
+  fun dismissLayersSheet() {
+    scope.launch { layersSheetState.hide() }.invokeOnCompletion {
+      if (!layersSheetState.isVisible) showLayersSheet = false
+    }
+  }
+
+  fun dismissMapTypesSheet() {
+    scope.launch { mapTypesSheetState.hide() }.invokeOnCompletion {
+      if (!mapTypesSheetState.isVisible) showMapTypesSheet = false
+    }
+  }
 
   LaunchedEffect(Unit) {
     loadLayers()
@@ -171,35 +196,44 @@ private fun Content(
     cameraPositionState = cameraPositionState,
     mapType = selectedMapType,
     additionalContent = {
+      LinearLoader(
+        modifier = Modifier.align(Alignment.TopCenter),
+        show = isLoading,
+      )
+      var fabMenuExpanded by rememberSaveable { mutableStateOf(false) }
+      SpeedDialFab(
+        modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
+        expanded = fabMenuExpanded,
+        onExpandedChange = { fabMenuExpanded = it },
+        icon = Icons.Default.Add,
+        items = listOf(
+          SpeedDialItem(Icons.Default.Layers, "Layers") {
+            showLayersSheet = true
+          },
+          SpeedDialItem(Icons.Default.Map, "Map") {
+            showMapTypesSheet = true
+          },
+          SpeedDialItem(Icons.Default.BugReport, if (isDebugVisible) "Hide debug" else "Show debug") {
+            toggleDebug()
+          },
+        ),
+      )
       Column(
-        modifier = Modifier.align(Alignment.TopStart),
-      ) {
-        LinearLoader(show = isLoading)
-        DebugConsole(
-          modifier = Modifier.padding(top = 10.dp, start = 16.dp),
-          cameraPositionState = cameraPositionState,
-        )
-      }
-      Column(
-        modifier = Modifier.align(Alignment.BottomStart).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-      ) {
-        IconFab(
-          imageVector = Icons.Default.Layers,
-          onClick = { scope.launch { layersSheetState.show() } },
-        )
-        IconFab(
-          imageVector = Icons.Default.Map,
-          onClick = { scope.launch { mapTypesSheetState.show() } },
-        )
-      }
-      Column(
-        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
         IconFab(
           imageVector = if (lastLocation != null) Icons.Default.LocationSearching else Icons.Default.LocationDisabled,
           onClick = ::onLocationClick,
+        )
+      }
+      if (isDebugVisible) {
+        DebugConsole(
+          modifier = Modifier
+            .align(Alignment.BottomStart)
+            .padding(bottom = 32.dp)
+            .padding(8.dp),
+          cameraPositionState = cameraPositionState,
         )
       }
     },
@@ -213,19 +247,21 @@ private fun Content(
   )
 
   LayersSheet(
+    show = showLayersSheet,
     sheetState = layersSheetState,
     layers = layers,
     selectedLayers = selectedLayers,
     onLayerToggled = toggleLayer,
-    onDismissRequest = { scope.launch { layersSheetState.hide() } },
+    onDismissRequest = ::dismissLayersSheet,
   )
 
   MapTypesSheet(
+    show = showMapTypesSheet,
     sheetState = mapTypesSheetState,
     mapTypes = mapTypes,
     selectedMapType = selectedMapType,
     onMapTypeSelected = selectMapType,
-    onDismissRequest = { scope.launch { mapTypesSheetState.hide() } },
+    onDismissRequest = ::dismissMapTypesSheet,
   )
 }
 

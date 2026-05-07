@@ -44,6 +44,9 @@ class MapViewModel(
   private val _layers = MutableStateFlow<List<Layer>>(emptyList())
   val layers = _layers.asStateFlow()
 
+  private val _isDebugVisible = MutableStateFlow(false)
+  val isDebugVisible = _isDebugVisible.asStateFlow()
+
   @OptIn(ExperimentalCoroutinesApi::class)
   val selectedLayers: Flow<List<Layer>>
     get() = _layers.flatMapMerge { repo.getSelectedLayers(it) }
@@ -91,6 +94,10 @@ class MapViewModel(
 
   fun loadMapTypes() {
     _mapTypes.value = MapType.entries - MapType.NONE
+  }
+
+  fun toggleDebug() {
+    _isDebugVisible.value = !_isDebugVisible.value
   }
 
   fun toggleLayer(layer: Layer, enabled: Boolean) {

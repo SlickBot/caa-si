@@ -25,51 +25,53 @@ import com.google.maps.android.compose.MapType
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapTypesSheet(
+  show: Boolean,
   sheetState: SheetState,
   mapTypes: List<MapType>,
   selectedMapType: MapType,
   onMapTypeSelected: (MapType) -> Unit,
   onDismissRequest: () -> Unit,
 ) {
-  if (sheetState.isVisible) {
-    ModalBottomSheet(
-      onDismissRequest = onDismissRequest,
-      sheetState = sheetState,
+  if (!show) return
+  ModalBottomSheet(
+    onDismissRequest = onDismissRequest,
+    sheetState = sheetState,
+    dragHandle = null,
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp)
     ) {
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(16.dp)
+      SimpleDragHandle(modifier = Modifier.align(Alignment.CenterHorizontally))
+      Text(
+        text = "Select Map Type",
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
+      )
+      LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
       ) {
-        Text(
-          text = "Select Map Type",
-          style = MaterialTheme.typography.titleLarge,
-          modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
-        )
-        LazyColumn(
-          modifier = Modifier.fillMaxWidth(),
-          verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-          items(mapTypes) { mapType ->
-            val isChecked = mapType == selectedMapType
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onMapTypeSelected(mapType) }
-            ) {
-              Checkbox(
-                checked = isChecked,
-                onCheckedChange = { checked ->
-                  onMapTypeSelected(mapType)
-                }
-              )
-              Spacer(Modifier.width(8.dp))
-              Text(
-                text = mapType.toString(),
-                style = MaterialTheme.typography.bodyLarge,
-              )
-            }
+        items(mapTypes) { mapType ->
+          val isChecked = mapType == selectedMapType
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable { onMapTypeSelected(mapType) }
+          ) {
+            Checkbox(
+              checked = isChecked,
+              onCheckedChange = { checked ->
+                onMapTypeSelected(mapType)
+              }
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+              text = mapType.toString(),
+              style = MaterialTheme.typography.bodyLarge,
+            )
           }
         }
       }
