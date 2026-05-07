@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.MapType
 import eu.slickbot.caasi.data.api.model.Layer
-import eu.slickbot.caasi.data.api.model.LayerFeature
+import eu.slickbot.caasi.data.api.model.MapFeature
 import eu.slickbot.caasi.data.repo.CaaSiRepository
 import eu.slickbot.caasi.utils.foldSafe
 import eu.slickbot.caasi.utils.toUserMessage
@@ -56,13 +56,13 @@ class MapViewModel(
 
   val selectedMapType = repo.getSelectedMapType()
 
-  private val _featuresBuilt = MutableStateFlow<List<LayerFeature>>(emptyList())
+  private val _featuresBuilt = MutableStateFlow<List<MapFeature>>(emptyList())
   val featuresBuilt = _featuresBuilt.asStateFlow()
 
-  private val _featuresOther = MutableStateFlow<List<LayerFeature>>(emptyList())
+  private val _featuresOther = MutableStateFlow<List<MapFeature>>(emptyList())
   val featuresOther = _featuresOther.asStateFlow()
 
-  val allFeatures: Flow<List<LayerFeature>> = combine(
+  val allFeatures: Flow<List<MapFeature>> = combine(
     featuresBuilt,
     featuresOther,
   ) { built, other -> built + other }

@@ -14,7 +14,7 @@ fun Context.startLocationRequest(
   fusedLocationClient: FusedLocationProviderClient,
   locationCallback: LocationCallback,
 ) {
-  val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10 * 1000).apply {
+  val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2 * 1000).apply {
     setMinUpdateDistanceMeters(2f)
     setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
     setWaitForAccurateLocation(true)

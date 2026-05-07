@@ -3,20 +3,33 @@ package eu.slickbot.caasi.ui.screen
 import android.location.Location
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector2D
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.TwoWayConverter
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.DomainDisabled
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LocationDisabled
 import androidx.compose.material.icons.filled.LocationSearching
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.MapType
@@ -44,8 +58,11 @@ import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberUpdatedMarkerState
 import eu.slickbot.caasi.DEFAULT_CAMERA_LOCATION
 import eu.slickbot.caasi.DEFAULT_CAMERA_ZOOM
+import eu.slickbot.caasi.R
 import eu.slickbot.caasi.data.api.model.Layer
-import eu.slickbot.caasi.data.api.model.LayerFeature
+import eu.slickbot.caasi.data.api.model.MapFeature
+import eu.slickbot.caasi.data.api.model.zoneColor
+import eu.slickbot.caasi.data.repo.CaaSiRepository
 import eu.slickbot.caasi.ui.component.DebugConsole
 import eu.slickbot.caasi.ui.component.IconFab
 import eu.slickbot.caasi.ui.component.LinearLoader
@@ -53,6 +70,7 @@ import eu.slickbot.caasi.ui.component.SpeedDialFab
 import eu.slickbot.caasi.ui.component.SpeedDialItem
 import eu.slickbot.caasi.ui.component.bottomsheet.LayersSheet
 import eu.slickbot.caasi.ui.component.bottomsheet.MapTypesSheet
+import eu.slickbot.caasi.ui.component.bottomsheet.ZoneDetailsSheet
 import eu.slickbot.caasi.ui.component.map.Map
 import eu.slickbot.caasi.ui.component.map.animateTo
 import eu.slickbot.caasi.ui.component.map.rememberCameraPositionState
@@ -117,7 +135,7 @@ private fun Content(
   mapTypes: List<MapType>,
   selectedMapType: MapType,
   selectMapType: (MapType) -> Unit,
-  allFeatures: List<LayerFeature>,
+  allFeatures: List<MapFeature>,
   isLoading: Boolean,
   isDebugVisible: Boolean,
   toggleDebug: () -> Unit,
@@ -134,8 +152,10 @@ private fun Content(
 
   val layersSheetState = rememberModalBottomSheetState()
   val mapTypesSheetState = rememberModalBottomSheetState()
+  val zoneDetailsSheetState = rememberModalBottomSheetState()
   var showLayersSheet by remember { mutableStateOf(false) }
   var showMapTypesSheet by remember { mutableStateOf(false) }
+  var selectedZone by remember { mutableStateOf<MapFeature?>(null) }
 
   fun dismissLayersSheet() {
     scope.launch { layersSheetState.hide() }.invokeOnCompletion {
@@ -146,6 +166,12 @@ private fun Content(
   fun dismissMapTypesSheet() {
     scope.launch { mapTypesSheetState.hide() }.invokeOnCompletion {
       if (!mapTypesSheetState.isVisible) showMapTypesSheet = false
+    }
+  }
+
+  fun dismissZoneDetailsSheet() {
+    scope.launch { zoneDetailsSheetState.hide() }.invokeOnCompletion {
+      if (!zoneDetailsSheetState.isVisible) selectedZone = null
     }
   }
 
@@ -227,6 +253,26 @@ private fun Content(
           onClick = ::onLocationClick,
         )
       }
+      val builtZonesShown = cameraPositionState.position.zoom >= CaaSiRepository.LAYER_BUILT_ZOOM_THRESHOLD
+      Box(
+        modifier = Modifier
+          .align(Alignment.BottomEnd)
+          .padding(16.dp),
+        contentAlignment = Alignment.Center,
+      ) {
+        Surface(
+          shape = CircleShape,
+          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+          tonalElevation = 2.dp,
+        ) {
+          Icon(
+            modifier = Modifier.padding(8.dp).size(20.dp),
+            imageVector = if (builtZonesShown) Icons.Default.Apartment else Icons.Default.DomainDisabled,
+            contentDescription = if (builtZonesShown) "Built zones shown" else "Built zones hidden",
+            tint = if (builtZonesShown) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+          )
+        }
+      }
       if (isDebugVisible) {
         DebugConsole(
           modifier = Modifier
@@ -239,9 +285,15 @@ private fun Content(
     },
     mapContent = {
       UserLocation(lastLocation)
-      for (feature in allFeatures) {
-        FeaturePolygons(feature)
-        FeaturePolyline(feature)
+      val zByLayer = layers
+        .withIndex()
+        .associate { (index, layer) -> layer.id to index.toFloat() }
+      val nuclearLayerId = layers.firstOrNull { it.title.contains("nuclear", ignoreCase = true) }?.id
+      for (mapFeature in allFeatures) {
+        val baseZ = zByLayer[mapFeature.layer.id] ?: 0f
+        val z = if (mapFeature.layer.id == nuclearLayerId) baseZ + 1000f else baseZ
+        FeaturePolygons(mapFeature, z) { selectedZone = it }
+        FeaturePolyline(mapFeature, z) { selectedZone = it }
       }
     },
   )
@@ -263,55 +315,84 @@ private fun Content(
     onMapTypeSelected = selectMapType,
     onDismissRequest = ::dismissMapTypesSheet,
   )
+
+  ZoneDetailsSheet(
+    zone = selectedZone,
+    sheetState = zoneDetailsSheetState,
+    onDismissRequest = ::dismissZoneDetailsSheet,
+  )
 }
+
+private val LatLngConverter = TwoWayConverter<LatLng, AnimationVector2D>(
+  convertToVector = { AnimationVector2D(it.latitude.toFloat(), it.longitude.toFloat()) },
+  convertFromVector = { LatLng(it.v1.toDouble(), it.v2.toDouble()) },
+)
 
 @Composable
 private fun UserLocation(location: Location?) {
-  val latLng = remember(location) { location?.toLatLng() }
-  val radius = remember(location) { location?.accuracy?.toDouble() }
-  if (latLng != null) {
-    Marker(
-      state = rememberUpdatedMarkerState(latLng),
-      icon = bitmapDescriptor(android.R.drawable.star_big_on),
-      anchor = Offset(0.5f, 0.5f),
-    )
-    if (radius != null) {
-      Circle(
-        center = latLng,
-        radius = radius,
-        strokeColor = Color.Red,
-        strokeWidth = 3f,
-      )
-    }
+  if (location == null) return
+
+  val latLngAnim = remember { Animatable(location.toLatLng(), LatLngConverter) }
+  val radiusAnim = remember { Animatable(location.accuracy) }
+
+  LaunchedEffect(location) {
+    val target = location.toLatLng()
+    val spec = tween<LatLng>(durationMillis = 2000, easing = LinearEasing)
+    val specF = tween<Float>(durationMillis = 2000, easing = LinearEasing)
+    launch { latLngAnim.animateTo(target, spec) }
+    launch { radiusAnim.animateTo(location.accuracy, specF) }
   }
+
+  Marker(
+    state = rememberUpdatedMarkerState(latLngAnim.value),
+    icon = bitmapDescriptor(R.drawable.ic_my_location),
+    anchor = Offset(0.5f, 0.5f),
+  )
+  Circle(
+    center = latLngAnim.value,
+    radius = radiusAnim.value.toDouble(),
+    fillColor = Color(0xFF1A73E8).copy(alpha = 0.15f),
+    strokeColor = Color(0xFF1A73E8).copy(alpha = 0.4f),
+    strokeWidth = 2f,
+  )
 }
 
 @Composable
 private fun FeaturePolygons(
-  feature: LayerFeature,
+  mapFeature: MapFeature,
+  zIndex: Float,
+  onClick: (MapFeature) -> Unit,
 ) {
-  for (polygon in feature.geometry.polygons.orEmpty()) {
+  val baseColor = mapFeature.layer.zoneColor()
+  val fill = baseColor.copy(alpha = 0.35f)
+  for (polygon in mapFeature.feature.geometry.polygons.orEmpty()) {
     Polygon(
       points = polygon,
-      fillColor = feature.color,
+      fillColor = fill,
+      strokeColor = baseColor,
       strokeWidth = 2f,
-//      clickable = true,
-//      onClick = { onFeatureClick(element.layer, element.feature) },
+      clickable = true,
+      onClick = { onClick(mapFeature) },
+      zIndex = zIndex,
     )
   }
 }
 
 @Composable
 private fun FeaturePolyline(
-  feature: LayerFeature,
+  mapFeature: MapFeature,
+  zIndex: Float,
+  onClick: (MapFeature) -> Unit,
 ) {
-  feature.geometry.line?.let { polyline ->
+  val color = mapFeature.layer.zoneColor()
+  mapFeature.feature.geometry.line?.let { polyline ->
     Polyline(
       points = polyline,
-      color = feature.color,
-      width = 2f,
-//      clickable = true,
-//      onClick = { onFeatureClick(element.layer, element.feature) },
+      color = color,
+      width = 3f,
+      clickable = true,
+      onClick = { onClick(mapFeature) },
+      zIndex = zIndex,
     )
   }
 }

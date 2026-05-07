@@ -5,6 +5,7 @@ import com.google.maps.android.compose.MapType
 import eu.slickbot.caasi.data.api.CaaSiApi
 import eu.slickbot.caasi.data.api.model.Layer
 import eu.slickbot.caasi.data.api.model.LayerFeature
+import eu.slickbot.caasi.data.api.model.MapFeature
 import eu.slickbot.caasi.data.prefs.SettingsPrefs
 import eu.slickbot.caasi.utils.asyncFlatMap
 import kotlinx.coroutines.Dispatchers
@@ -29,23 +30,23 @@ class CaaSiRepository(
     }
   }
 
-  suspend fun getBuiltFeatures(layers: List<Layer>, bounds: LatLngBounds?, zoom: Float): List<LayerFeature> {
+  suspend fun getBuiltFeatures(layers: List<Layer>, bounds: LatLngBounds?, zoom: Float): List<MapFeature> {
     return withContext(Dispatchers.Default) {
       if (zoom < LAYER_BUILT_ZOOM_THRESHOLD || bounds == null) {
         emptyList()
       } else {
         layers
           .filter { it.title == LAYER_BUILT_TITLE }
-          .asyncFlatMap { getFeatures(it, bounds) }
+          .asyncFlatMap { layer -> getFeatures(layer, bounds).map { MapFeature(layer, it) } }
       }
     }
   }
 
-  suspend fun getOtherFeatures(layers: List<Layer>): List<LayerFeature> {
+  suspend fun getOtherFeatures(layers: List<Layer>): List<MapFeature> {
     return withContext(Dispatchers.Default) {
       layers
         .filter { it.title != LAYER_BUILT_TITLE }
-        .asyncFlatMap { getFeatures(it) }
+        .asyncFlatMap { layer -> getFeatures(layer).map { MapFeature(layer, it) } }
     }
   }
 
@@ -73,7 +74,7 @@ class CaaSiRepository(
   }
 
   companion object {
-    private const val LAYER_BUILT_ZOOM_THRESHOLD = 13f
+    const val LAYER_BUILT_ZOOM_THRESHOLD = 13f
     private const val LAYER_BUILT_TITLE = "Pozidano-built"
     private const val LAYER_BORDER_TITLE = "FIR"
   }
