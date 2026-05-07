@@ -162,7 +162,10 @@ class CaaSiApi(
   private fun request(url: String): Response {
     val request = Request.Builder().url(url).build()
     val response = client.newCall(request).execute()
-    require(response.isSuccessful) { "Request to $url was not successful" }
+    if (!response.isSuccessful) {
+      response.close()
+      throw HttpException(response.code, url)
+    }
     return response
   }
 

@@ -9,6 +9,7 @@ import eu.slickbot.caasi.data.api.model.Layer
 import eu.slickbot.caasi.data.api.model.LayerFeature
 import eu.slickbot.caasi.data.repo.CaaSiRepository
 import eu.slickbot.caasi.utils.foldSafe
+import eu.slickbot.caasi.utils.toUserMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -81,7 +82,7 @@ class MapViewModel(
           _layers.value = layers
         },
         onFailure = { th ->
-          _toastEvents.send(ToastEvent("Failed to load Layers: ${th.toString()}"))
+          _toastEvents.send(ToastEvent(th.toUserMessage("Failed to load Layers")))
         },
       )
       _isLoadingLayers.value = false
@@ -120,7 +121,7 @@ class MapViewModel(
           _featuresBuilt.value = features
         },
         onFailure = { th ->
-          _toastEvents.send(ToastEvent("Failed to load Built Features: ${th.toString()}"))
+          _toastEvents.send(ToastEvent(th.toUserMessage("Failed to load Built Features")))
         },
       )
       _isLoadingFeaturesBuilt.value = false
@@ -138,7 +139,7 @@ class MapViewModel(
           _featuresOther.value = features
         },
         onFailure = { th ->
-          _toastEvents.send(ToastEvent("Failed to load Other Features: ${th.toString()}"))
+          _toastEvents.send(ToastEvent(th.toUserMessage("Failed to load Other Features")))
         },
       )
       _isLoadingFeaturesOther.value = false
