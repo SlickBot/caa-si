@@ -34,7 +34,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -96,7 +95,7 @@ fun MapScreen(
     }
   }
 
-  val layers by vm.layers.collectAsState()
+  val layers by vm.layers.collectAsState(emptyList())
   val selectedLayers by vm.selectedLayers.collectAsState(emptyList())
   val mapTypes by vm.mapTypes.collectAsState()
   val selectedMapType by vm.selectedMapType.collectAsState(MapType.NORMAL)
@@ -117,9 +116,8 @@ fun MapScreen(
       isLoading = isLoading,
       isDebugVisible = isDebugVisible,
       toggleDebug = vm::toggleDebug,
-      loadLayers = vm::loadLayers,
+      refresh = vm::refresh,
       loadMapTypes = vm::loadMapTypes,
-      loadOtherFeatures = vm::loadOtherFeatures,
       loadBuiltFeatures = vm::loadBuiltFeatures,
     )
   }
@@ -139,9 +137,8 @@ private fun Content(
   isLoading: Boolean,
   isDebugVisible: Boolean,
   toggleDebug: () -> Unit,
-  loadLayers: () -> Unit,
+  refresh: () -> Unit,
   loadMapTypes: () -> Unit,
-  loadOtherFeatures: () -> Unit,
   loadBuiltFeatures: (Float, LatLngBounds?) -> Unit,
 ) {
   val scope = rememberCoroutineScope()
@@ -176,12 +173,8 @@ private fun Content(
   }
 
   LaunchedEffect(Unit) {
-    loadLayers()
+    refresh()
     loadMapTypes()
-  }
-
-  LaunchedEffect(selectedLayers) {
-    loadOtherFeatures()
   }
 
   val zoom = cameraPositionState.position.zoom

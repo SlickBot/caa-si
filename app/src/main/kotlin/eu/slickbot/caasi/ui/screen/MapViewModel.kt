@@ -15,11 +15,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MapViewModel(
@@ -32,24 +34,19 @@ class MapViewModel(
   private val _isLoadingFeaturesBuilt = MutableStateFlow(false)
   val isLoadingFeaturesBuilt = _isLoadingFeaturesBuilt.asStateFlow()
 
-  private val _isLoadingFeaturesOther = MutableStateFlow(false)
-  val isLoadingFeaturesOther = _isLoadingFeaturesOther.asStateFlow()
-
   val isLoading: Flow<Boolean> = combine(
     isLoadingLayers,
     isLoadingFeaturesBuilt,
-    isLoadingFeaturesOther,
-  ) { it.any { it } }
+  ) { a, b -> a || b }
 
-  private val _layers = MutableStateFlow<List<Layer>>(emptyList())
-  val layers = _layers.asStateFlow()
+  val layers: Flow<List<Layer>> = repo.layersFlow()
+    .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
   private val _isDebugVisible = MutableStateFlow(false)
   val isDebugVisible = _isDebugVisible.asStateFlow()
 
   @OptIn(ExperimentalCoroutinesApi::class)
-  val selectedLayers: Flow<List<Layer>>
-    get() = _layers.flatMapMerge { repo.getSelectedLayers(it) }
+  val selectedLayers: Flow<List<Layer>> = layers.flatMapMerge { repo.getSelectedLayers(it) }
 
   private val _mapTypes = MutableStateFlow<List<MapType>>(emptyList())
   val mapTypes = _mapTypes.asStateFlow()
@@ -59,8 +56,14 @@ class MapViewModel(
   private val _featuresBuilt = MutableStateFlow<List<MapFeature>>(emptyList())
   val featuresBuilt = _featuresBuilt.asStateFlow()
 
-  private val _featuresOther = MutableStateFlow<List<MapFeature>>(emptyList())
-  val featuresOther = _featuresOther.asStateFlow()
+  // Cached features from DB, filtered by selected layers (BUILT is never in cache)
+  val featuresOther: Flow<List<MapFeature>> = combine(
+    repo.mapFeaturesFlow(),
+    selectedLayers,
+  ) { all, selected ->
+    val selectedIds = selected.map { it.id }.toSet()
+    all.filter { it.layer.id in selectedIds }
+  }
 
   val allFeatures: Flow<List<MapFeature>> = combine(
     featuresBuilt,
@@ -70,22 +73,19 @@ class MapViewModel(
   private val _toastEvents = Channel<ToastEvent>()
   val toastEvents = _toastEvents.receiveAsFlow()
 
-  private var layersJob: Job? = null
+  private var refreshJob: Job? = null
   private var featuresBuiltJob: Job? = null
-  private var featuresOtherJob: Job? = null
 
-  fun loadLayers() {
-    layersJob?.cancel()
-    layersJob = viewModelScope.launch {
+  fun refresh() {
+    refreshJob?.cancel()
+    refreshJob = viewModelScope.launch {
       _isLoadingLayers.value = true
       runCatching {
-        repo.getLayers()
+        repo.refreshAll()
       }.foldSafe(
-        onSuccess = { layers ->
-          _layers.value = layers
-        },
+        onSuccess = { /* DB Flow propagates */ },
         onFailure = { th ->
-          _toastEvents.send(ToastEvent(th.toUserMessage("Failed to load Layers")))
+          _toastEvents.send(ToastEvent(th.toUserMessage("Failed to refresh data")))
         },
       )
       _isLoadingLayers.value = false
@@ -132,24 +132,6 @@ class MapViewModel(
         },
       )
       _isLoadingFeaturesBuilt.value = false
-    }
-  }
-
-  fun loadOtherFeatures() {
-    featuresOtherJob?.cancel()
-    featuresOtherJob = viewModelScope.launch {
-      _isLoadingFeaturesOther.value = true
-      runCatching {
-        repo.getOtherFeatures(selectedLayers.first())
-      }.foldSafe(
-        onSuccess = { features ->
-          _featuresOther.value = features
-        },
-        onFailure = { th ->
-          _toastEvents.send(ToastEvent(th.toUserMessage("Failed to load Other Features")))
-        },
-      )
-      _isLoadingFeaturesOther.value = false
     }
   }
 

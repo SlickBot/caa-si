@@ -1,11 +1,13 @@
 package eu.slickbot.caasi
 
 import eu.slickbot.caasi.data.api.CaaSiApi
+import eu.slickbot.caasi.data.db.AppDatabase
 import eu.slickbot.caasi.data.prefs.SettingsPrefs
 import eu.slickbot.caasi.data.repo.CaaSiRepository
 import eu.slickbot.caasi.ui.screen.MapViewModel
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
@@ -16,6 +18,8 @@ val appModule = module {
   singleOf(::SettingsPrefs)
   factoryOf(::createHttpClient)
   factoryOf(::CaaSiApi)
+  single { AppDatabase.create(androidContext()) }
+  single { get<AppDatabase>().cacheDao() }
   factoryOf(::CaaSiRepository)
   viewModelOf(::MapViewModel)
 }

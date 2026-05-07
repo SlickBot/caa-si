@@ -14,8 +14,8 @@ configure<ApplicationExtension> {
     applicationId = namespace
 
     minSdk = 26
-    targetSdk = 36
-    compileSdk = 36
+    targetSdk = 37
+    compileSdk = 37
 
     versionCode = 1
     versionName = "1.0"
@@ -79,17 +79,13 @@ dependencies {
   implementation(libs.androidx.datastore.preferences)
 
   // Room
-//  implementation(libs.androidx.room.runtime)
-//  implementation(libs.androidx.room.ktx)
-//  ksp(libs.androidx.room.compiler)
+  implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.room.ktx)
+  ksp(libs.androidx.room.compiler)
 
   // OkHttp
   implementation(libs.okhttp)
   implementation(libs.okhttp.logging)
-
-  // Retrofit
-//  implementation(libs.retrofit)
-//  implementation(libs.retrofit.moshi)
 
   // Moshi
   implementation(libs.moshi.kotlin)

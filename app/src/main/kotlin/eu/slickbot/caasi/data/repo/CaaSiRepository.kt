@@ -2,51 +2,96 @@ package eu.slickbot.caasi.data.repo
 
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.MapType
+import com.squareup.moshi.Moshi
 import eu.slickbot.caasi.data.api.CaaSiApi
 import eu.slickbot.caasi.data.api.model.Layer
 import eu.slickbot.caasi.data.api.model.LayerFeature
 import eu.slickbot.caasi.data.api.model.MapFeature
+import eu.slickbot.caasi.data.db.dao.CacheDao
+import eu.slickbot.caasi.data.db.entity.LayerEntity
+import eu.slickbot.caasi.data.db.entity.LayerFeatureEntity
 import eu.slickbot.caasi.data.prefs.SettingsPrefs
 import eu.slickbot.caasi.utils.asyncFlatMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class CaaSiRepository(
   private val api: CaaSiApi,
+  private val cache: CacheDao,
   private val settingsPrefs: SettingsPrefs,
 ) {
 
-  suspend fun getLayers(): List<Layer> {
-    return withContext(Dispatchers.IO) {
-      api.getLayers()
+  companion object {
+    const val LAYER_BUILT_ZOOM_THRESHOLD = 13f
+    private const val LAYER_BUILT_TITLE = "Pozidano-built"
+    private const val LAYER_BORDER_TITLE = "FIR"
+  }
+
+  private val moshi = Moshi.Builder().build()
+  private val layerAdapter = moshi.adapter(Layer::class.java)
+  private val featureAdapter = moshi.adapter(LayerFeature::class.java)
+
+  fun layersFlow(): Flow<List<Layer>> = cache.flowLayers().map { rows ->
+    rows.mapNotNull { row -> runCatching { layerAdapter.fromJson(row.json) }.getOrNull() }
+  }
+
+  fun mapFeaturesFlow(): Flow<List<MapFeature>> = combine(
+    cache.flowLayers(),
+    cache.flowFeatures(),
+  ) { layerRows, featureRows ->
+    val layersById = layerRows.mapNotNull { row ->
+      runCatching { layerAdapter.fromJson(row.json) }.getOrNull()?.let { row.id to it }
+    }.toMap()
+    featureRows.mapNotNull { row ->
+      val layer = layersById[row.layerId] ?: return@mapNotNull null
+      val feature = runCatching { featureAdapter.fromJson(row.json) }.getOrNull()
+        ?: return@mapNotNull null
+      MapFeature(layer, feature)
     }
   }
 
-  suspend fun getFeatures(layer: Layer, bounds: LatLngBounds? = null): List<LayerFeature> {
-    return withContext(Dispatchers.IO) {
-      api.getLayerFeatures(layer, bounds)
-    }
-  }
+  suspend fun refreshAll() {
+    withContext(Dispatchers.IO) {
+      val layers = api.getLayers()
+      val nonBuilt = layers.filter { it.title != LAYER_BUILT_TITLE }
 
-  suspend fun getBuiltFeatures(layers: List<Layer>, bounds: LatLngBounds?, zoom: Float): List<MapFeature> {
-    return withContext(Dispatchers.Default) {
-      if (zoom < LAYER_BUILT_ZOOM_THRESHOLD || bounds == null) {
-        emptyList()
-      } else {
-        layers
-          .filter { it.title == LAYER_BUILT_TITLE }
-          .asyncFlatMap { layer -> getFeatures(layer, bounds).map { MapFeature(layer, it) } }
+      // any failed feature fetch throws; in that case we don't write to DB
+      val features = nonBuilt.asyncFlatMap { layer ->
+        api.getLayerFeatures(layer).map { layer.id to it }
       }
+
+      // only commit when we got real data: at least one layer AND at least one feature parsed
+      if (layers.isEmpty() || features.isEmpty()) return@withContext
+
+      val layerEntities = layers.mapIndexed { index, layer ->
+        LayerEntity(id = layer.id, position = index, json = layerAdapter.toJson(layer))
+      }
+      val featureEntities = features.map { (layerId, feature) ->
+        LayerFeatureEntity(
+          layerId = layerId,
+          featureId = feature.id,
+          json = featureAdapter.toJson(feature),
+        )
+      }
+
+      cache.replaceAll(layerEntities, featureEntities)
     }
   }
 
-  suspend fun getOtherFeatures(layers: List<Layer>): List<MapFeature> {
-    return withContext(Dispatchers.Default) {
+  suspend fun getBuiltFeatures(
+    layers: List<Layer>,
+    bounds: LatLngBounds?,
+    zoom: Float,
+  ): List<MapFeature> = withContext(Dispatchers.Default) {
+    if (zoom < LAYER_BUILT_ZOOM_THRESHOLD || bounds == null) {
+      emptyList()
+    } else {
       layers
-        .filter { it.title != LAYER_BUILT_TITLE }
-        .asyncFlatMap { layer -> getFeatures(layer).map { MapFeature(layer, it) } }
+        .filter { it.title == LAYER_BUILT_TITLE }
+        .asyncFlatMap { layer -> api.getLayerFeatures(layer, bounds).map { MapFeature(layer, it) } }
     }
   }
 
@@ -72,11 +117,4 @@ class CaaSiRepository(
   suspend fun saveSelectedMapType(mapType: MapType) {
     return settingsPrefs.saveMapType(mapType.name)
   }
-
-  companion object {
-    const val LAYER_BUILT_ZOOM_THRESHOLD = 13f
-    private const val LAYER_BUILT_TITLE = "Pozidano-built"
-    private const val LAYER_BORDER_TITLE = "FIR"
-  }
-
 }
