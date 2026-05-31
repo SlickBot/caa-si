@@ -65,6 +65,9 @@ configure<ApplicationExtension> {
 
 kotlin {
   jvmToolchain(11)
+  compilerOptions {
+    freeCompilerArgs.add("-Xannotation-default-target=param-property")
+  }
 }
 
 dependencies {
