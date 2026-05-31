@@ -1,17 +1,10 @@
 package eu.slickbot.caasi.utils
 
-import android.content.Context
-import android.graphics.Canvas
 import android.location.Location
-import androidx.annotation.DrawableRes
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.createBitmap
-import com.google.android.gms.maps.model.BitmapDescriptor
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.LatLng
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.JsonEncodingException
 import eu.slickbot.caasi.data.api.http.HttpException
+import org.maplibre.android.geometry.LatLng
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.supervisorScope
@@ -77,13 +70,4 @@ fun Throwable.toUserMessage(action: String): String = when (this) {
 
 fun Location.toLatLng(): LatLng {
   return LatLng(latitude, longitude)
-}
-
-fun Context.getBitmapDescriptor(@DrawableRes resId: Int): BitmapDescriptor {
-  val vectorDrawable = requireNotNull(ContextCompat.getDrawable(this, resId))
-  val bitmap = createBitmap(vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
-  val canvas = Canvas(bitmap)
-  vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
-  vectorDrawable.draw(canvas)
-  return BitmapDescriptorFactory.fromBitmap(bitmap)
 }

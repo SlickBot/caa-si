@@ -4,7 +4,6 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.ksp)
-  alias(libs.plugins.google.maps.secrets)
 }
 
 val appVersionName = "1.0"
@@ -64,10 +63,6 @@ configure<ApplicationExtension> {
   }
 }
 
-secrets {
-  defaultPropertiesFileName = "secrets.defaults.properties"
-}
-
 kotlin {
   jvmToolchain(11)
 }
@@ -108,12 +103,10 @@ dependencies {
 
   // Google play services
   implementation(libs.play.services.location)
-  implementation(libs.play.services.maps)
 
-  // Google maps
-  implementation(libs.maps.compose)
-  implementation(libs.maps.compose.utils)
-  implementation(libs.maps.compose.widgets)
+  // MapLibre
+  implementation(libs.maplibre.android)
+  implementation(libs.ramani.maplibre)
 
   // Test
   testImplementation(libs.junit)

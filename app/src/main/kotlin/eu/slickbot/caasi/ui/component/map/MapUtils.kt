@@ -1,115 +1,76 @@
 package eu.slickbot.caasi.ui.component.map
 
+import android.view.Gravity
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
-import com.google.android.gms.maps.model.MapStyleOptions
-import com.google.maps.android.compose.CameraPositionState
-import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.MapType
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.rememberCameraPositionState
-import java.lang.Integer.MAX_VALUE
-
-@Composable
-fun rememberMapUiSettings(
-  compassEnabled: Boolean = true,
-  indoorLevelPickerEnabled: Boolean = true,
-  mapToolbarEnabled: Boolean = true,
-  myLocationButtonEnabled: Boolean = true,
-  rotationGesturesEnabled: Boolean = true,
-  scrollGesturesEnabled: Boolean = true,
-  scrollGesturesEnabledDuringRotateOrZoom: Boolean = true,
-  tiltGesturesEnabled: Boolean = true,
-  zoomControlsEnabled: Boolean = true,
-  zoomGesturesEnabled: Boolean = true,
-): MapUiSettings {
-  return remember(
-    compassEnabled,
-    indoorLevelPickerEnabled,
-    mapToolbarEnabled,
-    myLocationButtonEnabled,
-    rotationGesturesEnabled,
-    scrollGesturesEnabled,
-    scrollGesturesEnabledDuringRotateOrZoom,
-    tiltGesturesEnabled,
-    zoomControlsEnabled,
-    zoomGesturesEnabled,
-  ) {
-    MapUiSettings(
-      compassEnabled = compassEnabled,
-      indoorLevelPickerEnabled = indoorLevelPickerEnabled,
-      mapToolbarEnabled = mapToolbarEnabled,
-      myLocationButtonEnabled = myLocationButtonEnabled,
-      rotationGesturesEnabled = rotationGesturesEnabled,
-      scrollGesturesEnabled = scrollGesturesEnabled,
-      scrollGesturesEnabledDuringRotateOrZoom = scrollGesturesEnabledDuringRotateOrZoom,
-      tiltGesturesEnabled = tiltGesturesEnabled,
-      zoomControlsEnabled = zoomControlsEnabled,
-      zoomGesturesEnabled = zoomGesturesEnabled,
-    )
-  }
-}
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import org.maplibre.android.geometry.LatLng
+import org.ramani.compose.CameraMotionType
+import org.ramani.compose.CameraPosition
+import org.ramani.compose.CameraPositionState
+import org.ramani.compose.MapProperties
+import org.ramani.compose.Margins
+import org.ramani.compose.UiSettings
+import org.ramani.compose.rememberCameraPositionState
 
 @Composable
 fun rememberCameraPositionState(
   latLng: LatLng,
   zoom: Float,
 ): CameraPositionState {
-  return rememberCameraPositionState {
-    position = CameraPosition.fromLatLngZoom(latLng, zoom)
-  }
+  return rememberCameraPositionState(
+    CameraPosition(target = latLng, zoom = zoom.toDouble()),
+  )
+}
+
+@Composable
+fun rememberMapUiSettings(
+  topInsetPx: Int = 0,
+  bottomInsetPx: Int = 0,
+  rotationGesturesEnabled: Boolean = true,
+  scrollGesturesEnabled: Boolean = true,
+  tiltGesturesEnabled: Boolean = true,
+  zoomGesturesEnabled: Boolean = true,
+): UiSettings {
+  val base = with(LocalDensity.current) { 8.dp.roundToPx() }
+  return UiSettings(
+    isLogoEnabled = false,
+    isAttributionEnabled = true,
+    // Offset MapLibre's native compass (top) and attribution (bottom) past the system bars.
+    compassGravity = Gravity.TOP or Gravity.END,
+    compassMargins = Margins(left = base, top = topInsetPx + base, right = base, bottom = base),
+    attributionsMargins = Margins(left = base, top = base, right = base, bottom = bottomInsetPx + base),
+    rotateGesturesEnabled = rotationGesturesEnabled,
+    scrollGesturesEnabled = scrollGesturesEnabled,
+    tiltGesturesEnabled = tiltGesturesEnabled,
+    zoomGesturesEnabled = zoomGesturesEnabled,
+  )
 }
 
 @Composable
 fun rememberMapProperties(
-  isBuildingEnabled: Boolean = false,
-  isIndoorEnabled: Boolean = false,
-  isMyLocationEnabled: Boolean = false,
-  isTrafficEnabled: Boolean = false,
-  latLngBoundsForCameraTarget: LatLngBounds? = null,
-  mapStyleOptions: MapStyleOptions? = null,
-  mapType: MapType = MapType.NORMAL,
-  maxZoomPreference: Float = 21.0f,
-  minZoomPreference: Float = 3.0f,
+  maxZoomPreference: Double = 21.0,
+  minZoomPreference: Double = 3.0,
 ): MapProperties {
-  return remember(
-    isBuildingEnabled,
-    isIndoorEnabled,
-    isMyLocationEnabled,
-    isTrafficEnabled,
-    latLngBoundsForCameraTarget,
-    mapStyleOptions,
-    mapType,
-    maxZoomPreference,
-    minZoomPreference,
-  ) {
-    MapProperties(
-      isBuildingEnabled = isBuildingEnabled,
-      isIndoorEnabled = isIndoorEnabled,
-      isMyLocationEnabled = isMyLocationEnabled,
-      isTrafficEnabled = isTrafficEnabled,
-      latLngBoundsForCameraTarget = latLngBoundsForCameraTarget,
-      mapStyleOptions = mapStyleOptions,
-      mapType = mapType,
-      maxZoomPreference = maxZoomPreference,
-      minZoomPreference = minZoomPreference,
-    )
-  }
+  return MapProperties(
+    maxZoom = maxZoomPreference,
+    minZoom = minZoomPreference,
+  )
 }
 
-suspend fun CameraPositionState.animateTo(
+fun CameraPositionState.animateTo(
   target: LatLng,
   zoom: Float,
   tilt: Float = 0f,
   bearing: Float = 0f,
-  durationMs: Int = MAX_VALUE,
+  durationMs: Int = 1000,
 ) {
-  animate(
-    update = CameraUpdateFactory.newCameraPosition(CameraPosition(target, zoom, tilt, bearing)),
-    durationMs = durationMs,
+  position = CameraPosition(
+    target = target,
+    zoom = zoom.toDouble(),
+    tilt = tilt.toDouble(),
+    bearing = bearing.toDouble(),
+    motionType = CameraMotionType.EASE,
+    animationDurationMs = durationMs,
   )
 }

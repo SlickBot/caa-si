@@ -10,26 +10,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.google.maps.android.compose.MapType
+import eu.slickbot.caasi.data.prefs.MapTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapTypesSheet(
   show: Boolean,
   sheetState: SheetState,
-  mapTypes: List<MapType>,
-  selectedMapType: MapType,
-  onMapTypeSelected: (MapType) -> Unit,
+  mapThemes: List<MapTheme>,
+  selectedMapTheme: MapTheme,
+  onMapThemeSelected: (MapTheme) -> Unit,
   onDismissRequest: () -> Unit,
 ) {
   if (!show) return
@@ -45,7 +45,7 @@ fun MapTypesSheet(
     ) {
       SimpleDragHandle(modifier = Modifier.align(Alignment.CenterHorizontally))
       Text(
-        text = "Select Map Type",
+        text = "Select Map Theme",
         style = MaterialTheme.typography.titleLarge,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
       )
@@ -53,28 +53,35 @@ fun MapTypesSheet(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(2.dp),
       ) {
-        items(mapTypes) { mapType ->
-          val isChecked = mapType == selectedMapType
+        items(mapThemes) { theme ->
+          val isSelected = theme == selectedMapTheme
           Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
               .fillMaxWidth()
-              .clickable { onMapTypeSelected(mapType) }
+              .clickable { onMapThemeSelected(theme) }
           ) {
-            Checkbox(
-              checked = isChecked,
-              onCheckedChange = { checked ->
-                onMapTypeSelected(mapType)
-              }
+            RadioButton(
+              selected = isSelected,
+              onClick = { onMapThemeSelected(theme) }
             )
             Spacer(Modifier.width(8.dp))
             Text(
-              text = mapType.toString(),
+              text = theme.label(),
               style = MaterialTheme.typography.bodyLarge,
             )
           }
         }
       }
     }
+  }
+}
+
+private fun MapTheme.label(): String {
+  return when (this) {
+    MapTheme.SYSTEM -> "System"
+    MapTheme.LIGHT -> "Light"
+    MapTheme.DARK -> "Dark"
+    MapTheme.SATELLITE -> "Satellite"
   }
 }

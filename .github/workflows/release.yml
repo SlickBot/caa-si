@@ -28,11 +28,6 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Inject Maps API key
-        env:
-          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
-        run: echo "MAPS_API_KEY=${MAPS_API_KEY}" >> local.properties
-
       - name: Decode keystore
         run: |
           printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 -d > "${{ github.workspace }}/app/release-key.jks"

@@ -3,10 +3,9 @@ package eu.slickbot.caasi.ui.screen
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.maps.model.LatLngBounds
-import com.google.maps.android.compose.MapType
 import eu.slickbot.caasi.data.api.model.Layer
 import eu.slickbot.caasi.data.api.model.MapFeature
+import eu.slickbot.caasi.data.prefs.MapTheme
 import eu.slickbot.caasi.data.repo.CaaSiRepository
 import eu.slickbot.caasi.utils.foldSafe
 import eu.slickbot.caasi.utils.toUserMessage
@@ -23,6 +22,7 @@ import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.maplibre.android.geometry.LatLngBounds
 
 class MapViewModel(
   private val repo: CaaSiRepository,
@@ -48,10 +48,10 @@ class MapViewModel(
   @OptIn(ExperimentalCoroutinesApi::class)
   val selectedLayers: Flow<List<Layer>> = layers.flatMapMerge { repo.getSelectedLayers(it) }
 
-  private val _mapTypes = MutableStateFlow<List<MapType>>(emptyList())
-  val mapTypes = _mapTypes.asStateFlow()
+  private val _mapThemes = MutableStateFlow<List<MapTheme>>(emptyList())
+  val mapThemes = _mapThemes.asStateFlow()
 
-  val selectedMapType = repo.getSelectedMapType()
+  val selectedMapTheme = repo.getSelectedMapTheme()
 
   private val _featuresBuilt = MutableStateFlow<List<MapFeature>>(emptyList())
   val featuresBuilt = _featuresBuilt.asStateFlow()
@@ -92,8 +92,8 @@ class MapViewModel(
     }
   }
 
-  fun loadMapTypes() {
-    _mapTypes.value = MapType.entries - MapType.NONE
+  fun loadMapThemes() {
+    _mapThemes.value = MapTheme.entries.toList()
   }
 
   fun toggleDebug() {
@@ -111,9 +111,9 @@ class MapViewModel(
     }
   }
 
-  fun selectMapType(mapType: MapType) {
+  fun selectMapTheme(theme: MapTheme) {
     viewModelScope.launch {
-      repo.saveSelectedMapType(mapType)
+      repo.saveSelectedMapTheme(theme)
     }
   }
 

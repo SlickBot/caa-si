@@ -1,10 +1,10 @@
 package eu.slickbot.caasi.data.api.model
 
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.ktx.utils.simplify
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import eu.slickbot.caasi.utils.simplify
 import eu.slickbot.caasi.utils.takeIf
+import org.maplibre.android.geometry.LatLng
 
 @JsonClass(generateAdapter = true)
 data class Geometry(
@@ -48,7 +48,12 @@ data class Geometry(
       cachedPolygons
     } else {
       cachedPolygonsTolerance = tolerance
-      cachedPolygons = if (tolerance == 0.0) polygons?.firstOrNull() else polygons?.firstOrNull()?.simplify(tolerance)
+      val first = polygons?.firstOrNull()
+      cachedPolygons = when {
+        first == null -> null
+        tolerance == 0.0 -> first
+        else -> simplify(first, tolerance)
+      }
       cachedPolygons
     }
   }
@@ -58,7 +63,12 @@ data class Geometry(
       cachedLine
     } else {
       cachedLineTolerance = tolerance
-      cachedLine = if (tolerance == 0.0) line else line?.simplify(tolerance)
+      val l = line
+      cachedLine = when {
+        l == null -> null
+        tolerance == 0.0 -> l
+        else -> simplify(l, tolerance)
+      }
       cachedLine
     }
   }

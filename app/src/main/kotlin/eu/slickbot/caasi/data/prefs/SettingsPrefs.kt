@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.google.maps.android.compose.MapType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -25,9 +24,9 @@ class SettingsPrefs(
       it[Keys.LAYERS]
     }
 
-  val mapTypesFlow: Flow<String> =
+  val mapThemeFlow: Flow<String> =
     context.dataStore.data.map {
-      it[Keys.MAP_TYPE] ?: MapType.NORMAL.name
+      it[Keys.MAP_TYPE] ?: MapTheme.SYSTEM.name
     }
 
   suspend fun saveLayers(ids: Set<String>) {
@@ -36,7 +35,7 @@ class SettingsPrefs(
     }
   }
 
-  suspend fun saveMapType(id: String) {
+  suspend fun saveMapTheme(id: String) {
     context.dataStore.edit {
       it[Keys.MAP_TYPE] = id
     }

@@ -1,6 +1,6 @@
 package eu.slickbot.caasi.data.api
 
-import com.google.android.gms.maps.model.LatLngBounds
+import org.maplibre.android.geometry.LatLngBounds
 import com.squareup.moshi.Moshi
 import eu.slickbot.caasi.API_BASE_URL
 import eu.slickbot.caasi.API_ID_URL
@@ -97,10 +97,10 @@ class CaaSiApi(
           "resultRecordCount" to 5000,
           "maxRecordCountFactor" to 3,
           "geometry" to jsonString(
-            "xmin" to bounds.southwest.longitude,
-            "ymin" to bounds.southwest.latitude,
-            "xmax" to bounds.northeast.longitude,
-            "ymax" to bounds.northeast.latitude,
+            "xmin" to bounds.southWest.longitude,
+            "ymin" to bounds.southWest.latitude,
+            "xmax" to bounds.northEast.longitude,
+            "ymax" to bounds.northEast.latitude,
             "spatialReference" to mapOf(
               "wkid" to 4326
             )
@@ -109,10 +109,10 @@ class CaaSiApi(
             "mode" to "view",
             "originPosition" to "upperLeft",
             "extent" to mapOf(
-              "xmin" to bounds.southwest.longitude,
-              "ymin" to bounds.southwest.latitude,
-              "xmax" to bounds.northeast.longitude,
-              "ymax" to bounds.northeast.latitude,
+              "xmin" to bounds.southWest.longitude,
+              "ymin" to bounds.southWest.latitude,
+              "xmax" to bounds.northEast.longitude,
+              "ymax" to bounds.northEast.latitude,
               "spatialReference" to mapOf(
                 "wkid" to 4326
               )
@@ -174,7 +174,7 @@ class CaaSiApi(
   }
 
   private fun requestString(url: String): String {
-    return request(url).body.string()
+    return request(url).use { it.body.string() }
   }
 
   private fun jsonString(vararg pairs: Pair<String, Any>): String {

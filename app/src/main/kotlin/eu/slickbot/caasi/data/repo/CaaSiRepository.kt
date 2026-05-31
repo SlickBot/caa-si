@@ -1,7 +1,5 @@
 package eu.slickbot.caasi.data.repo
 
-import com.google.android.gms.maps.model.LatLngBounds
-import com.google.maps.android.compose.MapType
 import com.squareup.moshi.Moshi
 import eu.slickbot.caasi.data.api.CaaSiApi
 import eu.slickbot.caasi.data.api.model.Layer
@@ -10,6 +8,7 @@ import eu.slickbot.caasi.data.api.model.MapFeature
 import eu.slickbot.caasi.data.db.dao.CacheDao
 import eu.slickbot.caasi.data.db.entity.LayerEntity
 import eu.slickbot.caasi.data.db.entity.LayerFeatureEntity
+import eu.slickbot.caasi.data.prefs.MapTheme
 import eu.slickbot.caasi.data.prefs.SettingsPrefs
 import eu.slickbot.caasi.utils.asyncFlatMap
 import kotlinx.coroutines.CoroutineDispatcher
@@ -18,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import org.maplibre.android.geometry.LatLngBounds
 
 class CaaSiRepository(
   private val api: CaaSiApi,
@@ -112,13 +112,13 @@ class CaaSiRepository(
     return settingsPrefs.saveLayers(ids)
   }
 
-  fun getSelectedMapType(): Flow<MapType> {
-    return settingsPrefs.mapTypesFlow.map { name ->
-      runCatching { MapType.valueOf(name) }.getOrDefault(MapType.NORMAL)
+  fun getSelectedMapTheme(): Flow<MapTheme> {
+    return settingsPrefs.mapThemeFlow.map { name ->
+      runCatching { MapTheme.valueOf(name) }.getOrDefault(MapTheme.SYSTEM)
     }
   }
 
-  suspend fun saveSelectedMapType(mapType: MapType) {
-    return settingsPrefs.saveMapType(mapType.name)
+  suspend fun saveSelectedMapTheme(theme: MapTheme) {
+    return settingsPrefs.saveMapTheme(theme.name)
   }
 }

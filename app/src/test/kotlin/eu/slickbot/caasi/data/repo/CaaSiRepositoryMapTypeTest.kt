@@ -1,9 +1,9 @@
 package eu.slickbot.caasi.data.repo
 
-import com.google.maps.android.compose.MapType
 import com.squareup.moshi.Moshi
 import eu.slickbot.caasi.data.api.CaaSiApi
 import eu.slickbot.caasi.data.db.dao.CacheDao
+import eu.slickbot.caasi.data.prefs.MapTheme
 import eu.slickbot.caasi.data.prefs.SettingsPrefs
 import io.mockk.every
 import io.mockk.mockk
@@ -15,9 +15,9 @@ import org.junit.Test
 
 class CaaSiRepositoryMapTypeTest {
 
-  private fun repoWithStoredMapType(stored: String): CaaSiRepository {
+  private fun repoWithStoredTheme(stored: String): CaaSiRepository {
     val settingsPrefs = mockk<SettingsPrefs>()
-    every { settingsPrefs.mapTypesFlow } returns flowOf(stored)
+    every { settingsPrefs.mapThemeFlow } returns flowOf(stored)
     return CaaSiRepository(
       api = mockk<CaaSiApi>(),
       cache = mockk<CacheDao>(),
@@ -27,14 +27,14 @@ class CaaSiRepositoryMapTypeTest {
   }
 
   @Test
-  fun getSelectedMapType_returnsStoredValue_whenValid() = runBlocking {
-    val result = repoWithStoredMapType("SATELLITE").getSelectedMapType().first()
-    assertEquals(MapType.SATELLITE, result)
+  fun getSelectedMapTheme_returnsStoredValue_whenValid() = runBlocking {
+    val result = repoWithStoredTheme("DARK").getSelectedMapTheme().first()
+    assertEquals(MapTheme.DARK, result)
   }
 
   @Test
-  fun getSelectedMapType_fallsBackToNormal_whenStoredValueIsNotARecognisedMapType() = runBlocking {
-    val result = repoWithStoredMapType("BOGUS_VALUE").getSelectedMapType().first()
-    assertEquals(MapType.NORMAL, result)
+  fun getSelectedMapTheme_fallsBackToSystem_whenStoredValueIsNotRecognised() = runBlocking {
+    val result = repoWithStoredTheme("BOGUS_VALUE").getSelectedMapTheme().first()
+    assertEquals(MapTheme.SYSTEM, result)
   }
 }
