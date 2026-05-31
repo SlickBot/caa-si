@@ -18,12 +18,9 @@ const val DATABASE_NAME = "$APP_NAME-${BuildConfig.BUILD_TYPE}.pref"
 val DEFAULT_CAMERA_LOCATION = LatLng(45.90136720, 15.026461780)
 const val DEFAULT_CAMERA_ZOOM = 7.3f
 
-// Map styles (OpenFreeMap — free, keyless, hosted)
 const val MAP_STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty"
 const val MAP_STYLE_DARK = "https://tiles.openfreemap.org/styles/dark"
 
-// Satellite: ESRI World Imagery raster tiles — keyless, free, attribution required.
-// Inline MapLibre style JSON (a single raster source + layer).
 const val MAP_STYLE_SATELLITE_JSON = """
 {
   "version": 8,

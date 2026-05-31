@@ -139,5 +139,4 @@ class MapViewModel(
     val message: String,
     val duration: Int = Toast.LENGTH_LONG,
   )
-
 }

@@ -70,12 +70,15 @@ fun Map(
         if (!idleListenerAdded[0]) {
           idleListenerAdded[0] = true
           mapView.getMapAsync { map ->
-            // Suppress ramani's built-in location puck: it renders beneath the annotation
-            // layers and would duplicate our own on-top location indicator (drawn in mapContent).
-            // ramani activates it after this callback, so disable it immediately, again after a
-            // short delay (to win the race), and re-assert on every camera idle.
+            // Suppress built-in location puck
             val disablePuck = Runnable {
-              runCatching { map.locationComponent.isLocationComponentEnabled = false }
+              try {
+                map.locationComponent.isLocationComponentEnabled = false
+              } catch (e: SecurityException) {
+                e.printStackTrace()
+              } catch (e: IllegalStateException) {
+                e.printStackTrace()
+              }
             }
             disablePuck.run()
             mapView.postDelayed(disablePuck, 1500)

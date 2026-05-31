@@ -25,17 +25,6 @@ private val LOCATION_PERMISSIONS = listOf(
   Manifest.permission.ACCESS_FINE_LOCATION,
 )
 
-/**
- * Snapshot of the app's location-permission state plus a way to request it.
- *
- * Local replacement for Accompanist's `MultiplePermissionsState`, exposing only
- * the surface the map screen actually consumes.
- *
- * [hasLocationAccess] is true when COARSE *or* FINE is granted — approximate
- * location is enough to use the map, so it gates whether we request/use location
- * at all. [hasPreciseLocation] reports whether FINE specifically is granted, so
- * the UI can later offer an "upgrade to precise" nudge when only COARSE was given.
- */
 class LocationPermissionsState(
   val hasLocationAccess: Boolean,
   val hasPreciseLocation: Boolean,
@@ -43,12 +32,6 @@ class LocationPermissionsState(
   val launchMultiplePermissionRequest: () -> Unit,
 )
 
-/**
- * Tracks COARSE + FINE location permission state and recomputes it after the
- * system dialog returns and whenever the activity resumes (e.g. coming back
- * from the app settings screen) — the lifecycle handling Accompanist gave us
- * for free.
- */
 @Composable
 fun rememberLocationPermissions(): LocationPermissionsState {
   val context = LocalContext.current

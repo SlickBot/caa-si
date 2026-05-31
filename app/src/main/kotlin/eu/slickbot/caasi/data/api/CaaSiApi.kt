@@ -196,5 +196,4 @@ class CaaSiApi(
       .hostnameVerifier(scoped)
       .build()
   }
-
 }

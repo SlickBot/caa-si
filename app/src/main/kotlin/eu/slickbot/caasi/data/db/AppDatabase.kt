@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import eu.slickbot.caasi.DATABASE_NAME
 import eu.slickbot.caasi.data.db.dao.CacheDao
 import eu.slickbot.caasi.data.db.entity.LayerEntity
 import eu.slickbot.caasi.data.db.entity.LayerFeatureEntity
@@ -20,7 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
     fun create(context: Context): AppDatabase = Room.databaseBuilder(
       context.applicationContext,
       AppDatabase::class.java,
-      "caasi.db",
+      DATABASE_NAME,
     ).build()
   }
 }

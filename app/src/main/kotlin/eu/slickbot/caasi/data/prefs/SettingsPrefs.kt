@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import eu.slickbot.caasi.PREFS_NAME
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -17,7 +18,7 @@ class SettingsPrefs(
     val MAP_TYPE = stringPreferencesKey("map_type")
   }
 
-  private val Context.dataStore by preferencesDataStore(name = "map_settings")
+  private val Context.dataStore by preferencesDataStore(name = PREFS_NAME)
 
   val layersFlow: Flow<Set<String>?> =
     context.dataStore.data.map {
