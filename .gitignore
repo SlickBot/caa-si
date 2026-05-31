@@ -6,7 +6,11 @@
 /captures
 .externalNativeBuild
 .cxx
-local.properties
 .idea
 .kotlin
 gradle/*.properties
+
+# ai
+.claude
+.serena
+docs/superpowers

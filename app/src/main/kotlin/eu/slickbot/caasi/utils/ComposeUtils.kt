@@ -1,6 +1,5 @@
 package eu.slickbot.caasi.utils
 
-import android.Manifest
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
@@ -8,9 +7,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.MultiplePermissionsState
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
@@ -35,17 +31,6 @@ fun isAppInDarkTheme(
       MapType.HYBRID -> true
     }
   }
-}
-
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun rememberLocationPermissions(): MultiplePermissionsState {
-  return rememberMultiplePermissionsState(
-    listOf(
-      Manifest.permission.ACCESS_COARSE_LOCATION,
-      Manifest.permission.ACCESS_FINE_LOCATION,
-    )
-  )
 }
 
 @Composable

@@ -1,4 +1,4 @@
-package eu.slickbot.caasi.data.api
+package eu.slickbot.caasi.data.api.http
 
 class HttpException(
   val code: Int,

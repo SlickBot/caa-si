@@ -13,6 +13,11 @@ class SettingsPrefs(
   private val context: Context,
 ) {
 
+  private object Keys {
+    val LAYERS = stringSetPreferencesKey("layers")
+    val MAP_TYPE = stringPreferencesKey("map_type")
+  }
+
   private val Context.dataStore by preferencesDataStore(name = "map_settings")
 
   val layersFlow: Flow<Set<String>?> =
@@ -36,10 +41,4 @@ class SettingsPrefs(
       it[Keys.MAP_TYPE] = id
     }
   }
-
-  private object Keys {
-    val LAYERS = stringSetPreferencesKey("layers")
-    val MAP_TYPE = stringPreferencesKey("map_type")
-  }
-
 }

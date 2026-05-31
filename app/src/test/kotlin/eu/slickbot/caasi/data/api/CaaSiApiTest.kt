@@ -1,130 +1,157 @@
 package eu.slickbot.caasi.data.api
 
-import eu.slickbot.caasi.createOkHttpClient
+import com.squareup.moshi.Moshi
+import eu.slickbot.caasi.data.api.http.OkHttpClientBuilder
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 class CaaSiApiTest {
 
-  companion object {
-    private val client = createOkHttpClient()
-    private val api = CaaSiApi(client)
+  private lateinit var server: MockWebServer
+  private lateinit var api: CaaSiApi
+
+  @Before
+  fun setUp() {
+    server = MockWebServer()
+    server.start()
+    val baseUrl = server.url("/").toString().trimEnd('/')
+    api = CaaSiApi(
+      client = OkHttpClientBuilder.build(enableHttpLogging = false),
+      moshi = Moshi.Builder().build(),
+      baseIdUrl = baseUrl,
+      apiBaseUrl = baseUrl,
+    )
+  }
+
+  @After
+  fun tearDown() {
+    server.shutdown()
+  }
+
+  private fun enqueueIdRedirect(id: String) {
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(301)
+        .addHeader("Location", server.url("/apps/webappviewer/index.html?id=$id").toString())
+    )
+    server.enqueue(MockResponse().setBody(""))
+  }
+
+  private fun enqueueData(itemId: String) {
+    server.enqueue(MockResponse().setBody("""{"map":{"itemId":"$itemId"}}"""))
+  }
+
+  private fun enqueueLayersResponse() {
+    server.enqueue(MockResponse().setBody(LAYERS_JSON))
   }
 
   @Test
   fun is_base_id_same() {
-    val baseId = api.getBaseId()
-    println("baseId = $baseId")
-    assert(baseId == CaaSiApi.DEFAULT_BASE_ID)
+    enqueueIdRedirect(CaaSiApi.DEFAULT_BASE_ID)
+    assertEquals(CaaSiApi.DEFAULT_BASE_ID, api.getBaseId())
   }
 
   @Test
   fun is_item_id_same() {
-    val itemId = api.getItemId()
-    println("itemId = $itemId")
-    assert(itemId == CaaSiApi.DEFAULT_ITEM_ID)
+    enqueueData(CaaSiApi.DEFAULT_ITEM_ID)
+    assertEquals(CaaSiApi.DEFAULT_ITEM_ID, api.getItemId(baseId = "ignored"))
   }
 
   @Test
   fun can_get_baseUrl() {
-    val baseUrl = api.getBaseUrl()
-    println("baseUrl = $baseUrl")
+    enqueueIdRedirect("abc123")
+    val url = api.getBaseUrl()
+    assertEquals("abc123", url.queryParameter("id"))
   }
 
   @Test
   fun can_get_baseId() {
-    val id = api.getBaseId()
-    println("id = $id")
+    enqueueIdRedirect("anything-here")
+    assertEquals("anything-here", api.getBaseId())
   }
 
   @Test
   fun can_get_itemId() {
-    val itemId = api.getItemId()
-    println("itemId = $itemId")
+    enqueueData("item-xyz")
+    assertEquals("item-xyz", api.getItemId(baseId = "ignored"))
   }
 
   @Test
   fun can_get_data() {
-    val data = api.getData()
-    println("data = $data")
+    val body = """{"map":{"itemId":"x"}}"""
+    server.enqueue(MockResponse().setBody(body))
+    assertEquals(body, api.getData(baseId = "ignored"))
   }
 
   @Test
   fun can_get_layersResponse() {
-    val layersResponse = api.getLayersResponse()
-    println("layersResponse = $layersResponse")
+    enqueueLayersResponse()
+    val resp = api.getLayersResponse(itemId = "ignored")
+    assertNotNull(resp)
+    assertTrue(resp.operationalLayers.isNotEmpty())
   }
 
   @Test
   fun can_get_layers() {
-    val layers = api.getLayers()
-    println("layers = $layers")
-
-    for (layer in layers) {
-      println(layer.title)
-      for (info in layer.popupInfo?.fieldInfos ?: emptyList()) {
-        println("\t${info.fieldName}")
-        println("\t\t\"${info.label}\"")
-      }
-    }
+    enqueueLayersResponse()
+    val layers = api.getLayers(itemId = "ignored")
+    // Fixture has two operationalLayers: one with url, one without.
+    // getLayers must drop the url-less one.
+    assertEquals(1, layers.size)
+    assertEquals("with-url", layers[0].id)
   }
 
-//  @Test
-//  fun can_get_featuresResponse() {
-//    val layers = api.getLayers(CaaSiApi.Companion.DEFAULT_ITEM_ID)
-//    val layer = layers.random()
-//    val featuresResponse = api.getLayerFeaturesResponse(layer)
-//    println("featuresResponse = $featuresResponse")
-//  }
-//
-//  @Test
-//  fun can_get_features() {
-//    val layers = api.getLayers(CaaSiApi.Companion.DEFAULT_ITEM_ID)
-//
-//    for (layer in layers) {
-//      for (feature in api.getLayerFeatures(layer)) {
-//        println("${layer.id} - ${layer.title}")
-//        if (feature.geometry.type == Geometry.Type.POLYGON) {
-//          println(feature.geometry.polygons)
-//        }
-//        if (feature.geometry.type == Geometry.Type.LINE) {
-//          println(feature.geometry.line)
-//        }
-//      }
-//    }
-//  }
-
-//  @Test
-//  fun compare() {
-//    runBlocking {
-//      val timeOld = measureTime { getLayersWithFeaturesOld() }
-//      println("timeOld = $timeOld")
-//
-//      val timeNew = measureTime { getLayersWithFeatures() }
-//      println("timeNew = $timeNew")
-//    }
-//  }
-
-//  suspend fun getLayersWithFeaturesOld(): List<LayerWithFeatures> {
-//    return withContext(Dispatchers.IO) {
-//      api.getLayers().map { layer ->
-//        LayerWithFeatures(layer, api.getLayerFeatures(layer))
-//      }
-//    }
-//  }
-//
-//  suspend fun getLayersWithFeatures(): List<LayerWithFeatures> {
-//    return withContext(Dispatchers.IO) {
-//      val layers = api.getLayers()
-//      val layersOut = Array<LayerWithFeatures?>(layers.size) { null }
-//
-//      layers.mapIndexed { i, layer ->
-//        launch {
-//          layersOut[i] = LayerWithFeatures(layer, api.getLayerFeatures(layer))
-//        }
-//      }.joinAll()
-//
-//      layersOut.filterNotNull()
-//    }
-//  }
-
+  companion object {
+    private val LAYERS_JSON = """
+      {
+        "authoringApp": "WebAppBuilder",
+        "authoringAppVersion": "2.23",
+        "baseMap": {
+          "baseMapLayers": [
+            {
+              "blendMode": "normal",
+              "id": "base-1",
+              "layerType": "ArcGISTiledMapServiceLayer",
+              "opacity": 1,
+              "title": "Base",
+              "url": "https://example.com/base"
+            }
+          ],
+          "title": "Topographic"
+        },
+        "bookmarks": [],
+        "initialState": {
+          "viewpoint": {
+            "rotation": 0,
+            "scale": 1000000.0,
+            "targetGeometry": {
+              "spatialReference": { "latestWkid": 3857, "wkid": 102100 },
+              "xmax": 1.0, "xmin": 0.0, "ymax": 1.0, "ymin": 0.0
+            }
+          }
+        },
+        "operationalLayers": [
+          {
+            "id": "with-url",
+            "title": "L1",
+            "url": "https://example.com/layer1",
+            "layerType": "FeatureLayer"
+          },
+          {
+            "id": "no-url",
+            "title": "L2",
+            "layerType": "GroupLayer"
+          }
+        ],
+        "spatialReference": { "latestWkid": 3857, "wkid": 102100 },
+        "version": "2.23"
+      }
+    """.trimIndent()
+  }
 }

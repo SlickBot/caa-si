@@ -4,32 +4,37 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.squareup.moshi.Moshi
 import eu.slickbot.caasi.API_BASE_URL
 import eu.slickbot.caasi.API_ID_URL
+import eu.slickbot.caasi.data.api.http.HttpException
 import eu.slickbot.caasi.data.api.model.Layer
 import eu.slickbot.caasi.data.api.model.LayerFeature
 import eu.slickbot.caasi.data.api.model.LayerFeaturesResponse
 import eu.slickbot.caasi.data.api.model.LayersResponse
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.json.JSONObject
 import java.net.URLEncoder
+import javax.net.ssl.HostnameVerifier
 
 class CaaSiApi(
   client: OkHttpClient,
+  private val moshi: Moshi,
+  private val baseIdUrl: String = API_ID_URL,
+  private val apiBaseUrl: String = API_BASE_URL,
 ) {
 
   companion object {
     const val DEFAULT_BASE_ID = "25ba69037c264c5faa5381174f76f861"
     const val DEFAULT_ITEM_ID = "14c35a6c4d5a472ea2ed5b2a75abc690"
+    private const val BASE_ID_CERT_IDENTITY = "freedns.si"
   }
 
-  private val client = client.newBuilder()
-    .hostnameVerifier { _, _ -> true } // ignore certificate
-    .build()
+  private val client = client.withScopedHostnameVerifier(baseIdUrl)
 
   fun getBaseUrl(): HttpUrl {
-    return request(API_ID_URL).request.url
+    return request(baseIdUrl).use { it.request.url }
   }
 
   fun getBaseId(url: HttpUrl = getBaseUrl()): String {
@@ -45,11 +50,11 @@ class CaaSiApi(
   }
 
   fun getData(baseId: String = getBaseId()): String {
-    return requestString("$API_BASE_URL/content/items/$baseId/data?f=json")
+    return requestString("$apiBaseUrl/content/items/$baseId/data?f=json")
   }
 
   fun getLayersResponse(itemId: String = getItemId()): LayersResponse {
-    return requestString("$API_BASE_URL/content/items/$itemId/data?f=json").parseJson()
+    return requestString("$apiBaseUrl/content/items/$itemId/data?f=json").parseJson()
   }
 
   fun getLayers(itemId: String = getItemId()): List<Layer> {
@@ -154,7 +159,6 @@ class CaaSiApi(
   }
 
   private inline fun <reified T : Any> String.parseJson(): T {
-    val moshi = Moshi.Builder().build()
     val adapter = moshi.adapter(T::class.java)
     return adapter.fromJson(this)!!
   }
@@ -179,6 +183,18 @@ class CaaSiApi(
 
   private fun Map<String, Any>.toJsonObject(): JSONObject {
     return JSONObject(this)
+  }
+
+  private fun OkHttpClient.withScopedHostnameVerifier(baseIdUrl: String): OkHttpClient {
+    val baseIdHost = baseIdUrl.toHttpUrlOrNull()?.host ?: return this
+    val default = hostnameVerifier
+    val scoped = HostnameVerifier { hostname, session ->
+      val identityToCheck = if (hostname == baseIdHost) BASE_ID_CERT_IDENTITY else hostname
+      default.verify(identityToCheck, session)
+    }
+    return newBuilder()
+      .hostnameVerifier(scoped)
+      .build()
   }
 
 }

@@ -7,6 +7,9 @@ plugins {
   alias(libs.plugins.google.maps.secrets)
 }
 
+val appVersionName = "1.0"
+val appVersionCode = 1
+
 configure<ApplicationExtension> {
   namespace = "eu.slickbot.caasi"
 
@@ -17,21 +20,31 @@ configure<ApplicationExtension> {
     targetSdk = 37
     compileSdk = 37
 
-    versionCode = 1
-    versionName = "1.0"
+    versionName = appVersionName
+    versionCode = appVersionCode
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
+  signingConfigs {
+    create("release") {
+      System.getenv("KEYSTORE_FILE")?.let { storeFile = file(it) }
+      storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+      keyAlias = System.getenv("KEY_ALIAS") ?: ""
+      keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+    }
+  }
+
   buildTypes {
     release {
-      isMinifyEnabled = false
-      proguardFiles(
-        getDefaultProguardFile("proguard-android-optimize.txt"),
-        "proguard-rules.pro"
-      )
       applicationIdSuffix = ".release"
       resValue("string", "app_name", "CaaSI")
+
+      proguardFiles(
+        getDefaultProguardFile("proguard-android-optimize.txt"),
+        "proguard-rules.pro",
+      )
+      signingConfig = signingConfigs.getByName("release")
     }
     debug {
       applicationIdSuffix = ".debug"
@@ -51,6 +64,10 @@ configure<ApplicationExtension> {
   }
 }
 
+secrets {
+  defaultPropertiesFileName = "secrets.defaults.properties"
+}
+
 kotlin {
   jvmToolchain(11)
 }
@@ -68,9 +85,6 @@ dependencies {
   implementation(libs.androidx.material.icons.extended)
   debugImplementation(libs.androidx.ui.tooling)
   debugImplementation(libs.androidx.ui.test.manifest)
-
-  // Permissions
-  implementation(libs.accompanist.permissions)
 
   // Koin
   implementation(libs.koin.compose)
@@ -103,6 +117,9 @@ dependencies {
 
   // Test
   testImplementation(libs.junit)
+  testImplementation(libs.okhttp.mockwebserver)
+  testImplementation(libs.okhttp.tls)
+  testImplementation(libs.mockk)
   androidTestImplementation(libs.androidx.junit)
   androidTestImplementation(libs.androidx.espresso.core)
   androidTestImplementation(platform(libs.androidx.compose.bom))

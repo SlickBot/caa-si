@@ -11,7 +11,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.JsonEncodingException
-import eu.slickbot.caasi.data.api.HttpException
+import eu.slickbot.caasi.data.api.http.HttpException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.supervisorScope

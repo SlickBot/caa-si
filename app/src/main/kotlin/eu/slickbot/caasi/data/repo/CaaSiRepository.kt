@@ -12,6 +12,7 @@ import eu.slickbot.caasi.data.db.entity.LayerEntity
 import eu.slickbot.caasi.data.db.entity.LayerFeatureEntity
 import eu.slickbot.caasi.data.prefs.SettingsPrefs
 import eu.slickbot.caasi.utils.asyncFlatMap
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -21,7 +22,9 @@ import kotlinx.coroutines.withContext
 class CaaSiRepository(
   private val api: CaaSiApi,
   private val cache: CacheDao,
+  moshi: Moshi,
   private val settingsPrefs: SettingsPrefs,
+  private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
 
   companion object {
@@ -30,7 +33,6 @@ class CaaSiRepository(
     private const val LAYER_BORDER_TITLE = "FIR"
   }
 
-  private val moshi = Moshi.Builder().build()
   private val layerAdapter = moshi.adapter(Layer::class.java)
   private val featureAdapter = moshi.adapter(LayerFeature::class.java)
 
@@ -85,7 +87,7 @@ class CaaSiRepository(
     layers: List<Layer>,
     bounds: LatLngBounds?,
     zoom: Float,
-  ): List<MapFeature> = withContext(Dispatchers.Default) {
+  ): List<MapFeature> = withContext(ioDispatcher) {
     if (zoom < LAYER_BUILT_ZOOM_THRESHOLD || bounds == null) {
       emptyList()
     } else {
@@ -111,7 +113,9 @@ class CaaSiRepository(
   }
 
   fun getSelectedMapType(): Flow<MapType> {
-    return settingsPrefs.mapTypesFlow.map { MapType.valueOf(it) }
+    return settingsPrefs.mapTypesFlow.map { name ->
+      runCatching { MapType.valueOf(name) }.getOrDefault(MapType.NORMAL)
+    }
   }
 
   suspend fun saveSelectedMapType(mapType: MapType) {

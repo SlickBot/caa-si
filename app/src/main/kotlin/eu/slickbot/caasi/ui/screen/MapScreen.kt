@@ -1,6 +1,9 @@
 package eu.slickbot.caasi.ui.screen
 
+import android.content.Intent
 import android.location.Location
+import android.net.Uri
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
@@ -25,11 +28,18 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LocationDisabled
 import androidx.compose.material.icons.filled.LocationSearching
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,7 +56,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.Circle
@@ -71,12 +80,15 @@ import eu.slickbot.caasi.ui.component.bottomsheet.LayersSheet
 import eu.slickbot.caasi.ui.component.bottomsheet.MapTypesSheet
 import eu.slickbot.caasi.ui.component.bottomsheet.ZoneDetailsSheet
 import eu.slickbot.caasi.ui.component.map.Map
+import eu.slickbot.caasi.ui.permission.LocationPrompt
+import eu.slickbot.caasi.ui.permission.nextLocationPrompt
+import eu.slickbot.caasi.ui.permission.rememberLocationPermissions
+import eu.slickbot.caasi.ui.permission.shouldOfferPreciseUpgrade
 import eu.slickbot.caasi.ui.component.map.animateTo
 import eu.slickbot.caasi.ui.component.map.rememberCameraPositionState
 import eu.slickbot.caasi.utils.bitmapDescriptor
 import eu.slickbot.caasi.utils.rememberFusedLocationProviderClient
 import eu.slickbot.caasi.utils.rememberLocationCallback
-import eu.slickbot.caasi.utils.rememberLocationPermissions
 import eu.slickbot.caasi.utils.startLocationRequest
 import eu.slickbot.caasi.utils.toLatLng
 import kotlinx.coroutines.delay
@@ -103,9 +115,15 @@ fun MapScreen(
   val isLoading by vm.isLoading.collectAsState(initial = false)
   val isDebugVisible by vm.isDebugVisible.collectAsState()
 
-  Scaffold(modifier = Modifier.fillMaxSize()) { contentPadding ->
+  val snackbarHostState = remember { SnackbarHostState() }
+
+  Scaffold(
+    modifier = Modifier.fillMaxSize(),
+    snackbarHost = { SnackbarHost(snackbarHostState) },
+  ) { contentPadding ->
     Content(
       contentPadding = contentPadding,
+      snackbarHostState = snackbarHostState,
       layers = layers,
       selectedLayers = selectedLayers,
       toggleLayer = vm::toggleLayer,
@@ -123,10 +141,11 @@ fun MapScreen(
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Content(
   contentPadding: PaddingValues,
+  snackbarHostState: SnackbarHostState,
   layers: List<Layer>,
   selectedLayers: List<Layer>,
   toggleLayer: (Layer, Boolean) -> Unit,
@@ -190,22 +209,47 @@ private fun Content(
   val locationProvider = rememberFusedLocationProviderClient()
   val permissionsState = rememberLocationPermissions()
 
-  LaunchedEffect(permissionsState.allPermissionsGranted) {
-    if (permissionsState.allPermissionsGranted) {
+  LaunchedEffect(permissionsState.hasLocationAccess) {
+    if (permissionsState.hasLocationAccess) {
       context.startLocationRequest(locationProvider, locationCallback)
     } else {
       permissionsState.launchMultiplePermissionRequest()
     }
   }
 
+  var pendingPrompt by remember { mutableStateOf<LocationPrompt?>(null) }
+  var preciseUpgradeOffered by rememberSaveable { mutableStateOf(false) }
+
   fun onLocationClick() {
+    val prompt = nextLocationPrompt(
+      granted = permissionsState.hasLocationAccess,
+      shouldShowRationale = permissionsState.shouldShowRationale,
+    )
+    if (prompt != null) {
+      pendingPrompt = prompt
+      return
+    }
     scope.launch {
-      if (permissionsState.allPermissionsGranted) {
-        lastLocation?.let { location ->
-          cameraPositionState.animateTo(location.toLatLng(), 14f)
+      lastLocation?.let { location ->
+        cameraPositionState.animateTo(location.toLatLng(), 14f)
+      }
+    }
+    val offerPrecise = shouldOfferPreciseUpgrade(
+      hasLocationAccess = permissionsState.hasLocationAccess,
+      hasPreciseLocation = permissionsState.hasPreciseLocation,
+      alreadyOffered = preciseUpgradeOffered,
+    )
+    if (offerPrecise) {
+      preciseUpgradeOffered = true
+      scope.launch {
+        val result = snackbarHostState.showSnackbar(
+          message = "Showing approximate location",
+          actionLabel = "Enable precise",
+          duration = SnackbarDuration.Long,
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+          permissionsState.launchMultiplePermissionRequest()
         }
-      } else {
-        permissionsState.launchMultiplePermissionRequest()
       }
     }
   }
@@ -314,6 +358,49 @@ private fun Content(
     sheetState = zoneDetailsSheetState,
     onDismissRequest = ::dismissZoneDetailsSheet,
   )
+
+  pendingPrompt?.let { prompt ->
+    LocationPermissionDialog(
+      prompt = prompt,
+      onDismiss = { pendingPrompt = null },
+      onRequestPermission = {
+        pendingPrompt = null
+        permissionsState.launchMultiplePermissionRequest()
+      },
+      onOpenSettings = {
+        pendingPrompt = null
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+          data = Uri.fromParts("package", context.packageName, null)
+        }
+        context.startActivity(intent)
+      },
+    )
+  }
+}
+
+@Composable
+private fun LocationPermissionDialog(
+  prompt: LocationPrompt,
+  onDismiss: () -> Unit,
+  onRequestPermission: () -> Unit,
+  onOpenSettings: () -> Unit,
+) {
+  when (prompt) {
+    LocationPrompt.RequestWithRationale -> AlertDialog(
+      onDismissRequest = onDismiss,
+      title = { Text("Location needed") },
+      text = { Text("CaaSI uses your location to show your position on the airspace map. It stays on your device.") },
+      confirmButton = { TextButton(onClick = onRequestPermission) { Text("Grant") } },
+      dismissButton = { TextButton(onClick = onDismiss) { Text("Not now") } },
+    )
+    LocationPrompt.OfferSettings -> AlertDialog(
+      onDismissRequest = onDismiss,
+      title = { Text("Location permission required") },
+      text = { Text("Location permission was denied. Enable it in app settings to see your position on the map.") },
+      confirmButton = { TextButton(onClick = onOpenSettings) { Text("Open Settings") } },
+      dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+  }
 }
 
 private val LatLngConverter = TwoWayConverter<LatLng, AnimationVector2D>(
