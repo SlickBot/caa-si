@@ -16,4 +16,4 @@ gradle/*.properties
 # ai
 .claude
 .serena
-docs/superpowers
+.superpowers
