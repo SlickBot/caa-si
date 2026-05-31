@@ -70,6 +70,16 @@ kotlin {
   }
 }
 
+tasks.withType<Test>().configureEach {
+  useJUnit {
+    if (project.hasProperty("liveTests")) {
+      includeCategories("eu.slickbot.caasi.LiveNetwork")
+    } else {
+      excludeCategories("eu.slickbot.caasi.LiveNetwork")
+    }
+  }
+}
+
 dependencies {
   // Android & Compose
   implementation(libs.androidx.core.ktx)
