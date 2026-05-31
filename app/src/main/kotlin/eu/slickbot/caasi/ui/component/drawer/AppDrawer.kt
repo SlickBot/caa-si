@@ -10,14 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
@@ -26,13 +23,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import eu.slickbot.caasi.BuildConfig
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDrawer(
   isDebugVisible: Boolean,
@@ -43,24 +38,21 @@ fun AppDrawer(
   modifier: Modifier = Modifier,
 ) {
   ModalDrawerSheet(modifier = modifier) {
-    Column(
-      modifier = Modifier
-        .fillMaxHeight()
-        .padding(horizontal = 12.dp, vertical = 28.dp),
-    ) {
-      Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Text(
-          text = "CAA-SI",
-          style = MaterialTheme.typography.titleLarge,
-        )
-        Text(
-          text = "Slovenian airspace map",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
+    Column(modifier = Modifier.fillMaxHeight()) {
+      Spacer(Modifier.height(28.dp))
+      Text(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        text = "CAA-SI",
+        style = MaterialTheme.typography.titleLarge,
+      )
+      Text(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        text = "Slovenian airspace map",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
 
-      Spacer(Modifier.height(24.dp))
+      Spacer(Modifier.height(20.dp))
 
       DrawerActionItem(
         icon = Icons.Default.Layers,
@@ -81,30 +73,26 @@ fun AppDrawer(
 
       Spacer(Modifier.weight(1f))
 
-      Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-      ) {
-        Text(
-          text = "DATA SOURCES",
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.primary,
-        )
-        dataSources.forEach { source ->
-          AttributionRow(source = source, onClick = { onOpenUrl(source.url) })
-        }
+      DrawerSectionLabel("DATA SOURCES")
+      dataSources.forEach { source ->
+        DrawerSourceItem(source = source, onClick = { onOpenUrl(source.url) })
       }
+      DrawerTextItem("v${BuildConfig.VERSION_NAME}")
 
-      Spacer(Modifier.height(20.dp))
-
-      Text(
-        text = "v${BuildConfig.VERSION_NAME}",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 16.dp),
-      )
+      Spacer(Modifier.height(12.dp))
     }
   }
+}
+
+@Composable
+private fun DrawerSectionLabel(text: String) {
+  Text(
+    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+    text = text,
+    style = MaterialTheme.typography.labelSmall,
+    color = MaterialTheme.colorScheme.primary,
+    letterSpacing = 1.sp,
+  )
 }
 
 @Composable
@@ -116,9 +104,9 @@ private fun DrawerActionItem(
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(28.dp))
       .clickable(onClick = onClick)
       .padding(horizontal = 16.dp, vertical = 14.dp),
+    horizontalArrangement = Arrangement.spacedBy(20.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Icon(
@@ -126,10 +114,9 @@ private fun DrawerActionItem(
       contentDescription = null,
       tint = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Spacer(Modifier.width(16.dp))
     Text(
       text = label,
-      style = MaterialTheme.typography.labelLarge,
+      style = MaterialTheme.typography.bodyLarge,
     )
   }
 }
@@ -144,9 +131,9 @@ private fun DrawerToggleItem(
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(28.dp))
       .clickable { onToggle() }
-      .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+      .padding(horizontal = 16.dp, vertical = 8.dp),
+    horizontalArrangement = Arrangement.spacedBy(20.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Icon(
@@ -154,11 +141,10 @@ private fun DrawerToggleItem(
       contentDescription = null,
       tint = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Spacer(Modifier.width(16.dp))
     Text(
-      text = label,
-      style = MaterialTheme.typography.labelLarge,
       modifier = Modifier.weight(1f),
+      text = label,
+      style = MaterialTheme.typography.bodyLarge,
     )
     Switch(
       checked = checked,
@@ -168,22 +154,22 @@ private fun DrawerToggleItem(
 }
 
 @Composable
-private fun AttributionRow(
+private fun DrawerSourceItem(
   source: DataSource,
   onClick: () -> Unit,
 ) {
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clickable(onClick = onClick),
+      .clickable(onClick = onClick)
+      .padding(horizontal = 16.dp, vertical = 10.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Column(modifier = Modifier.weight(1f)) {
       Text(
         text = source.name,
-        style = MaterialTheme.typography.bodyLarge,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurface,
       )
       Text(
         text = source.role,
@@ -191,14 +177,23 @@ private fun AttributionRow(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
     }
-    Spacer(Modifier.width(12.dp))
     Icon(
       imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-      contentDescription = "Open ${source.name}",
+      contentDescription = "Open ${source.name} website",
       tint = MaterialTheme.colorScheme.onSurfaceVariant,
       modifier = Modifier.size(18.dp),
     )
   }
+}
+
+@Composable
+private fun DrawerTextItem(text: String) {
+  Text(
+    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+    text = text,
+    style = MaterialTheme.typography.bodySmall,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+  )
 }
 
 private data class DataSource(
