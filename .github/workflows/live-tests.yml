@@ -1,5 +1,6 @@
 name: Live tests
 
+# Registers schedule + workflow_dispatch from the default branch (master).
 on:
   schedule:
     - cron: '0 5 * * *'

@@ -1,5 +1,6 @@
 name: Release
 
+# Registers the tag trigger from the default branch (master).
 on:
   push:
     tags:
