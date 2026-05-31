@@ -46,10 +46,8 @@ fun Map(
   val mapView: MapView = rememberMapViewWithLifecycle()
   val density = LocalDensity.current
   val topInsetPx = with(density) { contentPadding.calculateTopPadding().roundToPx() }
-  val bottomInsetPx = with(density) { contentPadding.calculateBottomPadding().roundToPx() }
   val uiSettings = rememberMapUiSettings(
     topInsetPx = topInsetPx,
-    bottomInsetPx = bottomInsetPx,
     rotationGesturesEnabled = false,
   )
   val properties = rememberMapProperties()
@@ -75,8 +73,11 @@ fun Map(
               try {
                 map.locationComponent.isLocationComponentEnabled = false
               } catch (e: SecurityException) {
+                // Location permission not granted — nothing to disable.
                 e.printStackTrace()
-              } catch (e: IllegalStateException) {
+              } catch (e: RuntimeException) {
+                // LocationComponentNotInitializedException / IllegalStateException when the
+                // component isn't activated yet — the delayed run and idle retries cover it.
                 e.printStackTrace()
               }
             }

@@ -26,7 +26,6 @@ fun rememberCameraPositionState(
 @Composable
 fun rememberMapUiSettings(
   topInsetPx: Int = 0,
-  bottomInsetPx: Int = 0,
   rotationGesturesEnabled: Boolean = true,
   scrollGesturesEnabled: Boolean = true,
   tiltGesturesEnabled: Boolean = true,
@@ -35,11 +34,9 @@ fun rememberMapUiSettings(
   val base = with(LocalDensity.current) { 8.dp.roundToPx() }
   return UiSettings(
     isLogoEnabled = false,
-    isAttributionEnabled = true,
-    // Offset MapLibre's native compass (top) and attribution (bottom) past the system bars.
+    isAttributionEnabled = false,
     compassGravity = Gravity.TOP or Gravity.END,
     compassMargins = Margins(left = base, top = topInsetPx + base, right = base, bottom = base),
-    attributionsMargins = Margins(left = base, top = base, right = base, bottom = bottomInsetPx + base),
     rotateGesturesEnabled = rotationGesturesEnabled,
     scrollGesturesEnabled = scrollGesturesEnabled,
     tiltGesturesEnabled = tiltGesturesEnabled,
