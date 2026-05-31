@@ -5,11 +5,9 @@ on:
     - cron: '0 5 * * *'
   workflow_dispatch:
 
-# Least privilege: live tests only read the repository.
 permissions:
   contents: read
 
-# Never run two live-test passes at once; never cancel one mid-flight.
 concurrency:
   group: live-tests
   cancel-in-progress: false

@@ -5,11 +5,9 @@ on:
     tags:
       - 'v*'
 
-# Needed to create the GitHub Release and upload APK assets.
 permissions:
   contents: write
 
-# Serialize releases per tag; never cancel publishing in progress.
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -23,7 +21,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # full history for generated release notes
+          fetch-depth: 0
 
       - name: Set up build environment
         uses: ./.github/actions/setup
@@ -44,12 +42,21 @@ jobs:
         if: always()
         run: rm -f "${{ runner.temp }}/release-key.jks"
 
+      - name: Rename APKs & R8 mapping
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/caasi-release.apk
+          mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/caasi-debug.apk
+          # Add mapping because this is OSS repo anyway
+          gzip -c app/build/outputs/mapping/release/mapping.txt > "app/build/outputs/mapping/release/caasi-${{ github.ref_name }}-mapping.txt.gz"
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: CaaSI ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/caasi-release.apk
+            app/build/outputs/apk/debug/caasi-debug.apk
+            # Add mapping because this is OSS repo anyway
+            app/build/outputs/mapping/release/caasi-${{ github.ref_name }}-mapping.txt.gz
           fail_on_unmatched_files: true
