@@ -1,7 +1,6 @@
 package eu.slickbot.caasi.data.api.model
 
 import androidx.compose.ui.graphics.Color
-import androidx.core.graphics.toColorInt
 import android.graphics.Color as AndroidColor
 
 fun Layer.zoneColor(): Color {

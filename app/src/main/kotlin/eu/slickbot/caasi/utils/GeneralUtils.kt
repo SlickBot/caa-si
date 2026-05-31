@@ -4,10 +4,10 @@ import android.location.Location
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.JsonEncodingException
 import eu.slickbot.caasi.data.api.http.HttpException
-import org.maplibre.android.geometry.LatLng
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.supervisorScope
+import org.maplibre.android.geometry.LatLng
 import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException

@@ -1,6 +1,5 @@
 package eu.slickbot.caasi.data.api
 
-import org.maplibre.android.geometry.LatLngBounds
 import com.squareup.moshi.Moshi
 import eu.slickbot.caasi.API_BASE_URL
 import eu.slickbot.caasi.API_ID_URL
@@ -15,6 +14,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.json.JSONObject
+import org.maplibre.android.geometry.LatLngBounds
 import java.net.URLEncoder
 import javax.net.ssl.HostnameVerifier
 

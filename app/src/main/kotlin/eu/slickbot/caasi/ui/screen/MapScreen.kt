@@ -12,7 +12,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.TwoWayConverter
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,18 +19,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apartment
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DomainDisabled
-import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LocationDisabled
 import androidx.compose.material.icons.filled.LocationSearching
-import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -40,6 +38,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,11 +65,10 @@ import eu.slickbot.caasi.data.repo.CaaSiRepository
 import eu.slickbot.caasi.ui.component.DebugConsole
 import eu.slickbot.caasi.ui.component.IconFab
 import eu.slickbot.caasi.ui.component.LinearLoader
-import eu.slickbot.caasi.ui.component.SpeedDialFab
-import eu.slickbot.caasi.ui.component.SpeedDialItem
-import eu.slickbot.caasi.ui.component.bottomsheet.LayersSheet
-import eu.slickbot.caasi.ui.component.bottomsheet.MapTypesSheet
 import eu.slickbot.caasi.ui.component.bottomsheet.ZoneDetailsSheet
+import eu.slickbot.caasi.ui.component.dialog.LayersDialog
+import eu.slickbot.caasi.ui.component.dialog.ThemeDialog
+import eu.slickbot.caasi.ui.component.drawer.AppDrawer
 import eu.slickbot.caasi.ui.component.map.Map
 import eu.slickbot.caasi.ui.component.map.animateTo
 import eu.slickbot.caasi.ui.component.map.rememberCameraPositionState
@@ -98,6 +96,7 @@ import org.ramani.compose.Polygon
 import org.ramani.compose.PolygonState
 import org.ramani.compose.Polyline
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
   vm: MapViewModel = koinInject(),
@@ -118,27 +117,72 @@ fun MapScreen(
   val isDebugVisible by vm.isDebugVisible.collectAsState()
 
   val snackbarHostState = remember { SnackbarHostState() }
+  val drawerState = rememberDrawerState(DrawerValue.Closed)
+  val scope = rememberCoroutineScope()
+  val context = LocalContext.current
 
-  Scaffold(
-    modifier = Modifier.fillMaxSize(),
-    snackbarHost = { SnackbarHost(snackbarHostState) },
-  ) { contentPadding ->
-    Content(
-      contentPadding = contentPadding,
-      snackbarHostState = snackbarHostState,
+  var showLayersDialog by remember { mutableStateOf(false) }
+  var showThemeDialog by remember { mutableStateOf(false) }
+
+  fun openUrl(url: String) {
+    runCatching {
+      context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    }
+  }
+
+  fun openFromDrawer(show: () -> Unit) {
+    scope.launch { drawerState.close() }
+    show()
+  }
+
+  ModalNavigationDrawer(
+    drawerState = drawerState,
+    drawerContent = {
+      AppDrawer(
+        isDebugVisible = isDebugVisible,
+        onToggleDebug = vm::toggleDebug,
+        onLayersClick = { openFromDrawer { showLayersDialog = true } },
+        onThemeClick = { openFromDrawer { showThemeDialog = true } },
+        onOpenUrl = ::openUrl,
+      )
+    },
+  ) {
+    Scaffold(
+      modifier = Modifier.fillMaxSize(),
+      snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { contentPadding ->
+      Content(
+        contentPadding = contentPadding,
+        snackbarHostState = snackbarHostState,
+        layers = layers,
+        selectedLayers = selectedLayers,
+        allFeatures = allFeatures,
+        isLoading = isLoading,
+        isDebugVisible = isDebugVisible,
+        selectedMapTheme = selectedMapTheme,
+        onOpenDrawer = { scope.launch { drawerState.open() } },
+        refresh = vm::refresh,
+        loadMapThemes = vm::loadMapThemes,
+        loadBuiltFeatures = vm::loadBuiltFeatures,
+      )
+    }
+  }
+
+  if (showLayersDialog) {
+    LayersDialog(
       layers = layers,
       selectedLayers = selectedLayers,
-      toggleLayer = vm::toggleLayer,
+      onLayerToggled = vm::toggleLayer,
+      onDismissRequest = { showLayersDialog = false },
+    )
+  }
+
+  if (showThemeDialog) {
+    ThemeDialog(
       mapThemes = mapThemes,
       selectedMapTheme = selectedMapTheme,
-      selectMapTheme = vm::selectMapTheme,
-      allFeatures = allFeatures,
-      isLoading = isLoading,
-      isDebugVisible = isDebugVisible,
-      toggleDebug = vm::toggleDebug,
-      refresh = vm::refresh,
-      loadMapThemes = vm::loadMapThemes,
-      loadBuiltFeatures = vm::loadBuiltFeatures,
+      onMapThemeSelected = vm::selectMapTheme,
+      onDismissRequest = { showThemeDialog = false },
     )
   }
 }
@@ -150,14 +194,11 @@ private fun Content(
   snackbarHostState: SnackbarHostState,
   layers: List<Layer>,
   selectedLayers: List<Layer>,
-  toggleLayer: (Layer, Boolean) -> Unit,
-  mapThemes: List<MapTheme>,
-  selectedMapTheme: MapTheme,
-  selectMapTheme: (MapTheme) -> Unit,
   allFeatures: List<MapFeature>,
   isLoading: Boolean,
   isDebugVisible: Boolean,
-  toggleDebug: () -> Unit,
+  selectedMapTheme: MapTheme,
+  onOpenDrawer: () -> Unit,
   refresh: () -> Unit,
   loadMapThemes: () -> Unit,
   loadBuiltFeatures: (Float, LatLngBounds?) -> Unit,
@@ -168,29 +209,13 @@ private fun Content(
     zoom = DEFAULT_CAMERA_ZOOM,
   )
 
-  val layersSheetState = rememberModalBottomSheetState()
-  val mapTypesSheetState = rememberModalBottomSheetState()
   val zoneDetailsSheetState = rememberModalBottomSheetState()
-  var showLayersSheet by remember { mutableStateOf(false) }
-  var showMapTypesSheet by remember { mutableStateOf(false) }
   var selectedZone by remember { mutableStateOf<MapFeature?>(null) }
 
   // Bottom -> top draw order: nuclear features drawn last (on top). Same list drives the tap hit-test.
   val orderedFeatures = remember(allFeatures, layers) {
     val nuclearLayerId = layers.firstOrNull { it.title.contains("nuclear", ignoreCase = true) }?.id
     allFeatures.sortedBy { if (it.layer.id == nuclearLayerId) 1 else 0 }
-  }
-
-  fun dismissLayersSheet() {
-    scope.launch { layersSheetState.hide() }.invokeOnCompletion {
-      if (!layersSheetState.isVisible) showLayersSheet = false
-    }
-  }
-
-  fun dismissMapTypesSheet() {
-    scope.launch { mapTypesSheetState.hide() }.invokeOnCompletion {
-      if (!mapTypesSheetState.isVisible) showMapTypesSheet = false
-    }
   }
 
   fun dismissZoneDetailsSheet() {
@@ -274,40 +299,34 @@ private fun Content(
         modifier = Modifier.align(Alignment.TopCenter),
         show = isLoading,
       )
-      var fabMenuExpanded by rememberSaveable { mutableStateOf(false) }
-      SpeedDialFab(
+      Surface(
         modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
-        expanded = fabMenuExpanded,
-        onExpandedChange = { fabMenuExpanded = it },
-        icon = Icons.Default.Add,
-        items = listOf(
-          SpeedDialItem(Icons.Default.Layers, "Layers") {
-            showLayersSheet = true
-          },
-          SpeedDialItem(Icons.Default.Map, "Map") {
-            showMapTypesSheet = true
-          },
-          SpeedDialItem(Icons.Default.BugReport, if (isDebugVisible) "Hide debug" else "Show debug") {
-            toggleDebug()
-          },
-        ),
-      )
-      Column(
-        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+        tonalElevation = 2.dp,
+        onClick = onOpenDrawer,
       ) {
-        IconFab(
-          imageVector = if (lastLocation != null) Icons.Default.LocationSearching else Icons.Default.LocationDisabled,
-          onClick = ::onLocationClick,
+        Icon(
+          modifier = Modifier.padding(10.dp).size(24.dp),
+          imageVector = Icons.Default.Menu,
+          contentDescription = "Open menu",
+          tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
+      IconFab(
+        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+        imageVector = if (lastLocation != null) Icons.Default.LocationSearching else Icons.Default.LocationDisabled,
+        onClick = ::onLocationClick,
+      )
       val builtZonesShown = viewport.first >= CaaSiRepository.LAYER_BUILT_ZOOM_THRESHOLD
-      Box(
-        modifier = Modifier
-          .align(Alignment.BottomEnd)
-          .padding(16.dp),
-        contentAlignment = Alignment.Center,
+      Column(
+        modifier = Modifier.align(Alignment.BottomStart).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.Start,
       ) {
+        if (isDebugVisible) {
+          DebugConsole(cameraPositionState = cameraPositionState)
+        }
         Surface(
           shape = CircleShape,
           color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
@@ -321,15 +340,6 @@ private fun Content(
           )
         }
       }
-      if (isDebugVisible) {
-        DebugConsole(
-          modifier = Modifier
-            .align(Alignment.BottomStart)
-            .padding(bottom = 32.dp)
-            .padding(8.dp),
-          cameraPositionState = cameraPositionState,
-        )
-      }
     },
     mapContent = {
       orderedFeatures.forEach { mapFeature ->
@@ -341,24 +351,6 @@ private fun Content(
       // Drawn last so its annotation layers sit on top of all zone layers.
       UserLocation(lastLocation)
     },
-  )
-
-  LayersSheet(
-    show = showLayersSheet,
-    sheetState = layersSheetState,
-    layers = layers,
-    selectedLayers = selectedLayers,
-    onLayerToggled = toggleLayer,
-    onDismissRequest = ::dismissLayersSheet,
-  )
-
-  MapTypesSheet(
-    show = showMapTypesSheet,
-    sheetState = mapTypesSheetState,
-    mapThemes = mapThemes,
-    selectedMapTheme = selectedMapTheme,
-    onMapThemeSelected = selectMapTheme,
-    onDismissRequest = ::dismissMapTypesSheet,
   )
 
   ZoneDetailsSheet(
