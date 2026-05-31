@@ -13,8 +13,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   release:
     name: Build signed release & publish
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -46,7 +50,6 @@ jobs:
         run: |
           mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/caasi-release.apk
           mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/caasi-debug.apk
-          # Add mapping because this is OSS repo anyway
           gzip -c app/build/outputs/mapping/release/mapping.txt > "app/build/outputs/mapping/release/caasi-${{ github.ref_name }}-mapping.txt.gz"
 
       - name: Publish GitHub Release
@@ -54,9 +57,9 @@ jobs:
         with:
           name: CaaSI ${{ github.ref_name }}
           generate_release_notes: true
+          # The R8 mapping is published too (safe: OSS repo) so crash traces decode.
           files: |
             app/build/outputs/apk/release/caasi-release.apk
             app/build/outputs/apk/debug/caasi-debug.apk
-            # Add mapping because this is OSS repo anyway
             app/build/outputs/mapping/release/caasi-${{ github.ref_name }}-mapping.txt.gz
           fail_on_unmatched_files: true

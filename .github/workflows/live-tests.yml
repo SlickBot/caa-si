@@ -15,23 +15,7 @@ concurrency:
 jobs:
   live:
     name: Live web-source tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up build environment
-        uses: ./.github/actions/setup
-
-      - name: Run live web-source tests
-        run: ./gradlew test -PliveTests --stacktrace
-
-      - name: Upload test reports
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: live-test-reports
-          path: app/build/reports/tests/
-          if-no-files-found: ignore
-          retention-days: 14
+    uses: ./.github/workflows/test.yml
+    with:
+      gradle-args: test -PliveTests
+      artifact-name: live-test-reports
