@@ -37,13 +37,10 @@ android {
       applicationIdSuffix = ".release"
       resValue("string", "app_name", "CaaSI")
 
-      proguardFiles(
-        getDefaultProguardFile("proguard-android-optimize.txt"),
-        "proguard-rules.pro",
-      )
       isMinifyEnabled = true
       isShrinkResources = true
       signingConfig = signingConfigs.getByName("release")
+      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }
     debug {
       applicationIdSuffix = ".debug"
