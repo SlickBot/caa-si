@@ -87,7 +87,7 @@ import eu.slickbot.caasi.utils.toLatLng
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
+import org.koin.androidx.compose.koinViewModel
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
 import org.ramani.compose.CenterState
@@ -95,11 +95,12 @@ import org.ramani.compose.Circle
 import org.ramani.compose.Polygon
 import org.ramani.compose.PolygonState
 import org.ramani.compose.Polyline
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
-  vm: MapViewModel = koinInject(),
+  vm: MapViewModel = koinViewModel(),
 ) {
   val activity = LocalActivity.current
   LaunchedEffect(activity) {
@@ -126,7 +127,7 @@ fun MapScreen(
 
   fun openUrl(url: String) {
     runCatching {
-      context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+      context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
     }
   }
 

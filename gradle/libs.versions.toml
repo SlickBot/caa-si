@@ -8,7 +8,7 @@ espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.13.0"
 composeBom = "2026.05.01"
-ksp = "2.3.8"
+ksp = "2.3.9"
 koin = "4.2.1"
 datastore = "1.2.1"
 moshi = "1.15.2"
@@ -45,7 +45,7 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
-koin-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin" }
+koin-androidx-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 moshi-adapters = { module = "com.squareup.moshi:moshi-adapters", version.ref = "moshi" }
 moshi-codegen = { module = "com.squareup.moshi:moshi-kotlin-codegen", version.ref = "moshi" }

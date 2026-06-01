@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.ApplicationExtension
-
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -9,7 +7,7 @@ plugins {
 val appVersionName = "1.0"
 val appVersionCode = 1
 
-configure<ApplicationExtension> {
+android {
   namespace = "eu.slickbot.caasi"
 
   defaultConfig {
@@ -27,7 +25,7 @@ configure<ApplicationExtension> {
 
   signingConfigs {
     create("release") {
-      System.getenv("KEYSTORE_FILE")?.let { storeFile = file(it) }
+      storeFile = System.getenv("KEYSTORE_FILE")?.let { file(it) }
       storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
       keyAlias = System.getenv("KEY_ALIAS") ?: ""
       keyPassword = System.getenv("KEY_PASSWORD") ?: ""
@@ -54,8 +52,8 @@ configure<ApplicationExtension> {
   }
 
   compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
   }
 
   buildFeatures {
@@ -63,10 +61,16 @@ configure<ApplicationExtension> {
     buildConfig = true
     resValues = true
   }
+
+  packaging {
+    resources {
+      excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    }
+  }
 }
 
 kotlin {
-  jvmToolchain(11)
+  jvmToolchain(21)
   compilerOptions {
     freeCompilerArgs.add("-Xannotation-default-target=param-property")
   }
@@ -97,7 +101,7 @@ dependencies {
   debugImplementation(libs.androidx.ui.test.manifest)
 
   // Koin
-  implementation(libs.koin.compose)
+  implementation(libs.koin.androidx.compose)
 
   // Datastore
   implementation(libs.androidx.datastore.preferences)
