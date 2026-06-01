@@ -68,9 +68,9 @@ jobs:
 
       - name: Rename APKs & R8 mapping
         run: |
-          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/caasi-${{ github.ref_name }}-release.apk
           mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/caasi-${{ github.ref_name }}-debug.apk
-          gzip -c app/build/outputs/mapping/release/mapping.txt > "app/build/outputs/mapping/release/caasi-${{ github.ref_name }}-mapping.txt.gz"
+          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/caasi-${{ github.ref_name }}-release.apk
+          gzip -c app/build/outputs/mapping/release/mapping.txt > "app/build/outputs/mapping/release/caasi-${{ github.ref_name }}-release-mapping.txt.gz"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -79,7 +79,7 @@ jobs:
           generate_release_notes: true
           # The R8 mapping is published too (safe: OSS repo) so crash traces decode.
           files: |
-            app/build/outputs/apk/release/caasi-${{ github.ref_name }}-release.apk
             app/build/outputs/apk/debug/caasi-${{ github.ref_name }}-debug.apk
-            app/build/outputs/mapping/release/caasi-${{ github.ref_name }}-mapping.txt.gz
+            app/build/outputs/apk/release/caasi-${{ github.ref_name }}-release.apk
+            app/build/outputs/mapping/release/caasi-${{ github.ref_name }}-release-mapping.txt.gz
           fail_on_unmatched_files: true
