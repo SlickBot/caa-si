@@ -75,7 +75,7 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: CaaSI ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           generate_release_notes: true
           # The R8 mapping is published too (safe: OSS repo) so crash traces decode.
           files: |
