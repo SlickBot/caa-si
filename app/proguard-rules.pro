@@ -2,5 +2,4 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
-# Moshi bundles consumer rules to keep the generated adapters and class names.
-# Moshi models are codegen-only -> @JsonClass(generateAdapter = true).
+# Moshi codegen (@JsonClass) ships its own keep rules.
