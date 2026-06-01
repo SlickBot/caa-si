@@ -1,73 +1,70 @@
 package eu.slickbot.caasi.ui.component.map
 
-import android.view.Gravity
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.maplibre.android.geometry.LatLng
-import org.ramani.compose.CameraMotionType
-import org.ramani.compose.CameraPosition
-import org.ramani.compose.CameraPositionState
-import org.ramani.compose.MapProperties
-import org.ramani.compose.Margins
-import org.ramani.compose.UiSettings
-import org.ramani.compose.rememberCameraPositionState
+import org.maplibre.compose.camera.CameraPosition
+import org.maplibre.compose.camera.CameraState
+import org.maplibre.compose.camera.rememberCameraState
+import org.maplibre.compose.map.GestureOptions
+import org.maplibre.compose.map.MapOptions
+import org.maplibre.compose.map.OrnamentOptions
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
-fun rememberCameraPositionState(
+fun rememberMapCameraState(
   latLng: LatLng,
   zoom: Float,
-): CameraPositionState {
-  return rememberCameraPositionState(
-    CameraPosition(target = latLng, zoom = zoom.toDouble()),
+): CameraState {
+  return rememberCameraState(
+    firstPosition = CameraPosition(target = latLng.toPosition(), zoom = zoom.toDouble()),
   )
 }
 
 @Composable
-fun rememberMapUiSettings(
-  topInsetPx: Int = 0,
-  rotationGesturesEnabled: Boolean = true,
+fun rememberMapOptions(
+  topInset: Dp = 0.dp,
+  rotationGesturesEnabled: Boolean = false,
   scrollGesturesEnabled: Boolean = true,
   tiltGesturesEnabled: Boolean = true,
   zoomGesturesEnabled: Boolean = true,
-): UiSettings {
-  val base = with(LocalDensity.current) { 8.dp.roundToPx() }
-  return UiSettings(
-    isLogoEnabled = false,
-    isAttributionEnabled = false,
-    compassGravity = Gravity.TOP or Gravity.END,
-    compassMargins = Margins(left = base, top = topInsetPx + base, right = base, bottom = base),
-    rotateGesturesEnabled = rotationGesturesEnabled,
-    scrollGesturesEnabled = scrollGesturesEnabled,
-    tiltGesturesEnabled = tiltGesturesEnabled,
-    zoomGesturesEnabled = zoomGesturesEnabled,
+): MapOptions {
+  val base = 8.dp
+  return MapOptions(
+    gestureOptions = GestureOptions(
+      isRotateEnabled = rotationGesturesEnabled,
+      isScrollEnabled = scrollGesturesEnabled,
+      isTiltEnabled = tiltGesturesEnabled,
+      isZoomEnabled = zoomGesturesEnabled,
+    ),
+    ornamentOptions = OrnamentOptions(
+      isLogoEnabled = false,
+      isAttributionEnabled = false,
+      isScaleBarEnabled = false,
+      isCompassEnabled = true,
+      compassAlignment = Alignment.TopEnd,
+      padding = PaddingValues(top = topInset + base, end = base, start = base, bottom = base),
+    ),
   )
 }
 
-@Composable
-fun rememberMapProperties(
-  maxZoomPreference: Double = 21.0,
-  minZoomPreference: Double = 3.0,
-): MapProperties {
-  return MapProperties(
-    maxZoom = maxZoomPreference,
-    minZoom = minZoomPreference,
-  )
-}
-
-fun CameraPositionState.animateTo(
+suspend fun CameraState.animateTo(
   target: LatLng,
   zoom: Float,
   tilt: Float = 0f,
   bearing: Float = 0f,
   durationMs: Int = 1000,
 ) {
-  position = CameraPosition(
-    target = target,
-    zoom = zoom.toDouble(),
-    tilt = tilt.toDouble(),
-    bearing = bearing.toDouble(),
-    motionType = CameraMotionType.EASE,
-    animationDurationMs = durationMs,
+  animateTo(
+    finalPosition = position.copy(
+      target = target.toPosition(),
+      zoom = zoom.toDouble(),
+      tilt = tilt.toDouble(),
+      bearing = bearing.toDouble(),
+    ),
+    duration = durationMs.milliseconds,
   )
 }

@@ -42,7 +42,6 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -71,7 +70,7 @@ import eu.slickbot.caasi.ui.component.dialog.ThemeDialog
 import eu.slickbot.caasi.ui.component.drawer.AppDrawer
 import eu.slickbot.caasi.ui.component.map.Map
 import eu.slickbot.caasi.ui.component.map.animateTo
-import eu.slickbot.caasi.ui.component.map.rememberCameraPositionState
+import eu.slickbot.caasi.ui.component.map.rememberMapCameraState
 import eu.slickbot.caasi.ui.permission.LocationPrompt
 import eu.slickbot.caasi.ui.permission.nextLocationPrompt
 import eu.slickbot.caasi.ui.permission.rememberLocationPermissions
@@ -82,7 +81,6 @@ import eu.slickbot.caasi.utils.pointInPolygon
 import eu.slickbot.caasi.utils.rememberFusedLocationProviderClient
 import eu.slickbot.caasi.utils.rememberLocationCallback
 import eu.slickbot.caasi.utils.startLocationRequest
-import eu.slickbot.caasi.utils.toHexString
 import eu.slickbot.caasi.utils.toLatLng
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -90,11 +88,16 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
-import org.ramani.compose.CenterState
-import org.ramani.compose.Circle
-import org.ramani.compose.Polygon
-import org.ramani.compose.PolygonState
-import org.ramani.compose.Polyline
+import androidx.compose.ui.graphics.Color
+import eu.slickbot.caasi.ui.component.map.lineFeatureCollection
+import eu.slickbot.caasi.ui.component.map.pointFeatureCollection
+import eu.slickbot.caasi.ui.component.map.polygonFeatureCollection
+import org.maplibre.compose.expressions.dsl.const
+import org.maplibre.compose.layers.CircleLayer
+import org.maplibre.compose.layers.FillLayer
+import org.maplibre.compose.layers.LineLayer
+import org.maplibre.compose.sources.GeoJsonData
+import org.maplibre.compose.sources.rememberGeoJsonSource
 import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -138,6 +141,9 @@ fun MapScreen(
 
   ModalNavigationDrawer(
     drawerState = drawerState,
+    // Swipe-to-open conflicts with map pan/zoom, so only allow drawer gestures while it's
+    // already open (keeps swipe-to-close). The menu button remains the way to open it.
+    gesturesEnabled = drawerState.isOpen,
     drawerContent = {
       AppDrawer(
         isDebugVisible = isDebugVisible,
@@ -205,7 +211,7 @@ private fun Content(
   loadBuiltFeatures: (Float, LatLngBounds?) -> Unit,
 ) {
   val scope = rememberCoroutineScope()
-  val cameraPositionState = rememberCameraPositionState(
+  val cameraState = rememberMapCameraState(
     latLng = DEFAULT_CAMERA_LOCATION,
     zoom = DEFAULT_CAMERA_ZOOM,
   )
@@ -264,7 +270,7 @@ private fun Content(
     }
     scope.launch {
       lastLocation?.let { location ->
-        cameraPositionState.animateTo(location.toLatLng(), 14f)
+        cameraState.animateTo(location.toLatLng(), 14f)
       }
     }
     val offerPrecise = shouldOfferPreciseUpgrade(
@@ -288,7 +294,7 @@ private fun Content(
   }
 
   Map(
-    cameraPositionState = cameraPositionState,
+    cameraState = cameraState,
     contentPadding = contentPadding,
     mapTheme = selectedMapTheme,
     onMapClick = { latLng ->
@@ -326,7 +332,7 @@ private fun Content(
         horizontalAlignment = Alignment.Start,
       ) {
         if (isDebugVisible) {
-          DebugConsole(cameraPositionState = cameraPositionState)
+          DebugConsole(cameraState = cameraState)
         }
         Surface(
           shape = CircleShape,
@@ -343,13 +349,14 @@ private fun Content(
       }
     },
     mapContent = {
-      orderedFeatures.forEach { mapFeature ->
-        key(mapFeature.layer.id, mapFeature.feature.id) {
-          FeaturePolygons(mapFeature)
-          FeaturePolyline(mapFeature)
+      // Group by layer so each airspace layer batches into ONE source + fill/line layers
+      // (was the shared-layerId FillManager batching; now the native source/layer idiom).
+      orderedFeatures.groupBy { it.layer }.forEach { (layer, features) ->
+        key(layer.id) {
+          LayerFeatures(layer.id, layer.zoneColor(), features)
         }
       }
-      // Drawn last so its annotation layers sit on top of all zone layers.
+      // Drawn last so it sits on top of all zone layers.
       UserLocation(lastLocation)
     },
   )
@@ -434,83 +441,66 @@ private fun UserLocation(location: Location?) {
 
   val latLngAnim = remember { Animatable(location.toLatLng(), LatLngConverter) }
   val radiusAnim = remember { Animatable(location.accuracy) }
-  val centerState = remember { CenterState(location.toLatLng()) }
-  val accuracyState = remember {
-    PolygonState(circlePolygon(location.toLatLng(), location.accuracy.toDouble()))
-  }
 
   LaunchedEffect(location) {
     val target = location.toLatLng()
-    // Short ease so the dot tracks the fix crisply rather than perpetually sliding
-    // toward a 2s-old position (location updates arrive ~every 2s).
+    // Short ease so the dot tracks the fix crisply (location updates arrive ~every 2s).
     val spec = tween<LatLng>(durationMillis = 600, easing = LinearEasing)
     val specF = tween<Float>(durationMillis = 600, easing = LinearEasing)
     launch { latLngAnim.animateTo(target, spec) }
     launch { radiusAnim.animateTo(location.accuracy, specF) }
   }
 
-  SideEffect {
-    centerState.center = latLngAnim.value
-    accuracyState.vertices = circlePolygon(latLngAnim.value, radiusAnim.value.toDouble())
-  }
+  val center = latLngAnim.value
+  val accuracyRing = circlePolygon(center, radiusAnim.value.toDouble())
 
-  // Accuracy halo: geographic (meters), so drawn as a Polygon — ramani's Circle is pixel-based.
-  Polygon(
-    state = accuracyState,
-    fillColor = "#1A73E8",
-    opacity = 0.15f,
-    borderColor = "#1A73E8",
-    borderWidth = 2.0f,
-    layerId = "user-accuracy",
-  )
-  // Position dot: fixed screen size, so a pixel-based Circle is correct here.
-  Circle(
-    centerState = centerState,
-    radius = 7.0f,
-    color = "#1A73E8",
-    opacity = 1.0f,
-    borderColor = "#FFFFFF",
-    borderWidth = 2.0f,
-    layerId = "user-dot",
+  val accuracySource = rememberGeoJsonSource(GeoJsonData.Features(polygonFeatureCollection(listOf(accuracyRing))))
+  val dotSource = rememberGeoJsonSource(GeoJsonData.Features(pointFeatureCollection(center)))
+
+  val accent = Color(0xFF1A73E8)
+  // Accuracy halo: geographic (meters) — fill + 2dp ring border.
+  FillLayer(id = "user-accuracy", source = accuracySource, color = const(accent), opacity = const(0.15f))
+  LineLayer(id = "user-accuracy-border", source = accuracySource, color = const(accent), width = const(2.dp))
+  // Position dot: fixed screen size — pixel-based circle.
+  CircleLayer(
+    id = "user-dot",
+    source = dotSource,
+    radius = const(7.dp),
+    color = const(accent),
+    strokeColor = const(Color.White),
+    strokeWidth = const(2.dp),
   )
 }
 
 @Composable
-private fun FeaturePolygons(
-  mapFeature: MapFeature,
+private fun LayerFeatures(
+  layerId: String,
+  color: Color,
+  features: List<MapFeature>,
 ) {
-  val hex = mapFeature.layer.zoneColor().toHexString()
-  // Share one layerId per airspace layer so all its polygons batch into a single
-  // FillManager (one source + one MapLibre layer). A unique layerId per polygon would
-  // create a layer per polygon — fine for the few static zones, but the dense per-viewport
-  // BUILT layer has hundreds–thousands of polygons and the renderer can't sustain that.
-  for (polygon in mapFeature.feature.geometry.polygons.orEmpty()) {
-    Polygon(
-      // Non-saveable: ramani's rememberPolygonState serializes every vertex into the
-      // instance-state Bundle; with the dense BUILT layer that overflows the ~1MB Binder
-      // limit (TransactionTooLargeException). Polygons are re-derived from cache, so they
-      // don't need to survive process death.
-      state = remember(polygon) { PolygonState(polygon) },
-      fillColor = hex,
-      opacity = 0.35f,
-      borderColor = hex,
-      borderWidth = 2.0f,
-      layerId = "fill-${mapFeature.layer.id}",
-    )
-  }
+  val polygonRings = features.flatMap { it.feature.geometry.polygons.orEmpty() }
+  val lines = features.mapNotNull { it.feature.geometry.line }
+
+  val polygonSource = rememberGeoJsonSource(GeoJsonData.Features(polygonFeatureCollection(polygonRings)))
+  val lineSource = rememberGeoJsonSource(GeoJsonData.Features(lineFeatureCollection(lines)))
+
+  FillLayer(
+    id = "fill-$layerId",
+    source = polygonSource,
+    color = const(color),
+    opacity = const(0.35f),
+  )
+  LineLayer(
+    id = "fill-border-$layerId",
+    source = polygonSource,
+    color = const(color),
+    width = const(2.dp),
+  )
+  LineLayer(
+    id = "line-$layerId",
+    source = lineSource,
+    color = const(color),
+    width = const(3.dp),
+  )
 }
 
-@Composable
-private fun FeaturePolyline(
-  mapFeature: MapFeature,
-) {
-  val hex = mapFeature.layer.zoneColor().toHexString()
-  mapFeature.feature.geometry.line?.let { line ->
-    Polyline(
-      points = line,
-      color = hex,
-      lineWidth = 3.0f,
-      layerId = "line-${mapFeature.layer.id}",
-    )
-  }
-}
