@@ -1,39 +1,68 @@
 package eu.slickbot.caasi.utils
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.maplibre.spatialk.geojson.Position
+import kotlin.math.asin
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class PolyUtilsTest {
 
-  @Test
-  fun simplify_removesNearlyCollinearMiddlePoints() {
-    val line = listOf(
-      Position(longitude = 0.0, latitude = 0.0),
-      Position(longitude = 1.0, latitude = 0.0),
-      Position(longitude = 2.0, latitude = 0.0),
-    )
-    val result = simplify(line, tolerance = 1.0)
-    assertEquals(2, result.size)
-    assertEquals(Position(longitude = 0.0, latitude = 0.0), result.first())
-    assertEquals(Position(longitude = 2.0, latitude = 0.0), result.last())
+  private val earthRadius = 6378137.0
+
+  // Great-circle distance in meters on the same sphere circlePolygon uses, so the
+  // radius assertions can be tight (it is the inverse of circlePolygon's offset math).
+  private fun haversineMeters(a: Position, b: Position): Double {
+    val lat1 = Math.toRadians(a.latitude)
+    val lat2 = Math.toRadians(b.latitude)
+    val dLat = Math.toRadians(b.latitude - a.latitude)
+    val dLng = Math.toRadians(b.longitude - a.longitude)
+    val s1 = sin(dLat / 2)
+    val s2 = sin(dLng / 2)
+    val h = s1 * s1 + cos(lat1) * cos(lat2) * s2 * s2
+    return 2.0 * earthRadius * asin(sqrt(h))
   }
 
   @Test
-  fun simplify_keepsPointsThatExceedTolerance() {
-    val line = listOf(
-      Position(longitude = 0.0, latitude = 0.0),
-      Position(longitude = 1.0, latitude = 5.0),
-      Position(longitude = 2.0, latitude = 0.0),
-    )
-    val result = simplify(line, tolerance = 1.0)
-    assertEquals(3, result.size)
+  fun circlePolygon_returnsRequestedNumberOfVertices() {
+    val ring = circlePolygon(Position(longitude = 15.0, latitude = 45.0), radiusMeters = 500.0, segments = 12)
+    assertEquals(12, ring.size)
   }
 
   @Test
-  fun simplify_returnsInputWhenTwoOrFewerPoints() {
-    val line = listOf(Position(longitude = 1.0, latitude = 1.0), Position(longitude = 2.0, latitude = 2.0))
-    assertTrue(simplify(line, tolerance = 0.5) === line)
+  fun circlePolygon_defaultsTo64Segments() {
+    val ring = circlePolygon(Position(longitude = 15.0, latitude = 45.0), radiusMeters = 500.0)
+    assertEquals(64, ring.size)
+  }
+
+  @Test
+  fun circlePolygon_everyVertexIsAtTheGivenRadius() {
+    val center = Position(longitude = 15.0, latitude = 45.0)
+    val radius = 1000.0
+    val ring = circlePolygon(center, radiusMeters = radius, segments = 32)
+    ring.forEach { vertex ->
+      assertEquals(radius, haversineMeters(center, vertex), 0.1)
+    }
+  }
+
+  @Test
+  fun circlePolygon_firstVertexIsDueNorthOfCenter() {
+    val center = Position(longitude = 15.0, latitude = 45.0)
+    val ring = circlePolygon(center, radiusMeters = 1000.0, segments = 8)
+    val north = ring.first()
+    // Vertex 0 is at bearing 0, so it sits directly north: same longitude, higher latitude.
+    assertEquals(center.longitude, north.longitude, 1e-9)
+    assertTrue(north.latitude > center.latitude)
+  }
+
+  @Test
+  fun circlePolygon_doesNotRepeatTheFirstVertex() {
+    // Closing the ring is the caller's job (closedRing); circlePolygon leaves it open.
+    val ring = circlePolygon(Position(longitude = 15.0, latitude = 45.0), radiusMeters = 500.0, segments = 16)
+    assertNotEquals(ring.first(), ring.last())
   }
 }

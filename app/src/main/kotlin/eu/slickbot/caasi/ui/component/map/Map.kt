@@ -50,7 +50,7 @@ fun Map(
   val currentOnCameraIdle by rememberUpdatedState(onCameraIdle)
   val currentOnMapClick by rememberUpdatedState(onMapClick)
 
-  // Replaces ramani's addOnCameraIdleListener: emit (zoom, bounds) once the camera settles.
+  // Emit (zoom, bounds) once the camera settles.
   LaunchedEffect(cameraState) {
     snapshotFlow { cameraState.position }
       .debounce(200L)
