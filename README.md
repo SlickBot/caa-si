@@ -44,8 +44,8 @@ up early.
 
 Kotlin 2.3 · Jetpack Compose (Material 3) · Koin for DI · Moshi · OkHttp · Room
 (layer/feature cache) · [MapLibre](https://maplibre.org) via
-[ramani-maps](https://github.com/ramani-maps/ramani-maps) · OpenFreeMap + Esri
-imagery · AGP 9. `minSdk` 26, `targetSdk` 37. Single `:app` module.
+[MapLibre Compose](https://github.com/maplibre/maplibre-compose) · OpenFreeMap + Esri
+imagery · AGP 9. `minSdk` 26, `targetSdk` 37.
 
 ## Building
 
