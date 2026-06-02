@@ -1,6 +1,6 @@
 package eu.slickbot.caasi
 
-import org.maplibre.android.geometry.LatLng
+import org.maplibre.spatialk.geojson.Position
 
 const val APP_NAME = "CAA-SI"
 
@@ -15,7 +15,7 @@ const val API_WRITE_TIMEOUT = 10L
 const val PREFS_NAME = "$APP_NAME-${BuildConfig.BUILD_TYPE}.db"
 const val DATABASE_NAME = "$APP_NAME-${BuildConfig.BUILD_TYPE}.pref"
 
-val DEFAULT_CAMERA_LOCATION = LatLng(45.90136720, 15.026461780)
+val DEFAULT_CAMERA_LOCATION = Position(longitude = 15.026461780, latitude = 45.90136720)
 const val DEFAULT_CAMERA_ZOOM = 7.3f
 
 const val MAP_STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty"

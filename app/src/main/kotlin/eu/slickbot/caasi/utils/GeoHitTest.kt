@@ -1,10 +1,10 @@
 package eu.slickbot.caasi.utils
 
-import org.maplibre.android.geometry.LatLng
+import org.maplibre.spatialk.geojson.Position
 import kotlin.math.sqrt
 
 /** Ray-casting point-in-polygon on planar lng/lat. Ring need not be closed. */
-fun pointInPolygon(point: LatLng, ring: List<LatLng>): Boolean {
+fun pointInPolygon(point: Position, ring: List<Position>): Boolean {
   if (ring.size < 3) {
     return false
   }
@@ -28,7 +28,7 @@ fun pointInPolygon(point: LatLng, ring: List<LatLng>): Boolean {
 }
 
 /** Minimum planar distance (degrees) from a point to a polyline. */
-fun distanceToPolyline(point: LatLng, line: List<LatLng>): Double {
+fun distanceToPolyline(point: Position, line: List<Position>): Double {
   if (line.isEmpty()) {
     return Double.MAX_VALUE
   }
@@ -45,7 +45,7 @@ fun distanceToPolyline(point: LatLng, line: List<LatLng>): Double {
   return min
 }
 
-private fun distanceToSegment(p: LatLng, a: LatLng, b: LatLng): Double {
+private fun distanceToSegment(p: Position, a: Position, b: Position): Double {
   val ax = a.longitude
   val ay = a.latitude
   val dx = b.longitude - ax
@@ -63,7 +63,7 @@ private fun distanceToSegment(p: LatLng, a: LatLng, b: LatLng): Double {
   return sqrt(ddx * ddx + ddy * ddy)
 }
 
-private fun planarDistance(a: LatLng, b: LatLng): Double {
+private fun planarDistance(a: Position, b: Position): Double {
   val dx = a.longitude - b.longitude
   val dy = a.latitude - b.latitude
   return sqrt(dx * dx + dy * dy)

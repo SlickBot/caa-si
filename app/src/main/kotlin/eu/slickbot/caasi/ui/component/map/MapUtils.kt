@@ -5,22 +5,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import org.maplibre.android.geometry.LatLng
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.CameraState
 import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.compose.map.GestureOptions
 import org.maplibre.compose.map.MapOptions
 import org.maplibre.compose.map.OrnamentOptions
+import org.maplibre.spatialk.geojson.Position
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun rememberMapCameraState(
-  latLng: LatLng,
+  position: Position,
   zoom: Float,
 ): CameraState {
   return rememberCameraState(
-    firstPosition = CameraPosition(target = latLng.toPosition(), zoom = zoom.toDouble()),
+    firstPosition = CameraPosition(target = position, zoom = zoom.toDouble()),
   )
 }
 
@@ -52,7 +52,7 @@ fun rememberMapOptions(
 }
 
 suspend fun CameraState.animateTo(
-  target: LatLng,
+  target: Position,
   zoom: Float,
   tilt: Float = 0f,
   bearing: Float = 0f,
@@ -60,7 +60,7 @@ suspend fun CameraState.animateTo(
 ) {
   animateTo(
     finalPosition = position.copy(
-      target = target.toPosition(),
+      target = target,
       zoom = zoom.toDouble(),
       tilt = tilt.toDouble(),
       bearing = bearing.toDouble(),

@@ -121,7 +121,6 @@ dependencies {
   implementation(libs.play.services.location)
 
   // MapLibre
-  implementation(libs.maplibre.android)        // kept: org.maplibre.android.geometry.LatLng/LatLngBounds (domain types)
   implementation(libs.maplibre.compose)
   implementation(libs.maplibre.compose.material3)
 

@@ -52,8 +52,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import eu.slickbot.caasi.DEFAULT_CAMERA_LOCATION
 import eu.slickbot.caasi.DEFAULT_CAMERA_ZOOM
 import eu.slickbot.caasi.data.api.model.Layer
@@ -70,6 +72,9 @@ import eu.slickbot.caasi.ui.component.dialog.ThemeDialog
 import eu.slickbot.caasi.ui.component.drawer.AppDrawer
 import eu.slickbot.caasi.ui.component.map.Map
 import eu.slickbot.caasi.ui.component.map.animateTo
+import eu.slickbot.caasi.ui.component.map.lineFeatureCollection
+import eu.slickbot.caasi.ui.component.map.pointFeatureCollection
+import eu.slickbot.caasi.ui.component.map.polygonFeatureCollection
 import eu.slickbot.caasi.ui.component.map.rememberMapCameraState
 import eu.slickbot.caasi.ui.permission.LocationPrompt
 import eu.slickbot.caasi.ui.permission.nextLocationPrompt
@@ -81,24 +86,19 @@ import eu.slickbot.caasi.utils.pointInPolygon
 import eu.slickbot.caasi.utils.rememberFusedLocationProviderClient
 import eu.slickbot.caasi.utils.rememberLocationCallback
 import eu.slickbot.caasi.utils.startLocationRequest
-import eu.slickbot.caasi.utils.toLatLng
+import eu.slickbot.caasi.utils.toPosition
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.geometry.LatLngBounds
-import androidx.compose.ui.graphics.Color
-import eu.slickbot.caasi.ui.component.map.lineFeatureCollection
-import eu.slickbot.caasi.ui.component.map.pointFeatureCollection
-import eu.slickbot.caasi.ui.component.map.polygonFeatureCollection
 import org.maplibre.compose.expressions.dsl.const
 import org.maplibre.compose.layers.CircleLayer
 import org.maplibre.compose.layers.FillLayer
 import org.maplibre.compose.layers.LineLayer
 import org.maplibre.compose.sources.GeoJsonData
 import org.maplibre.compose.sources.rememberGeoJsonSource
-import androidx.core.net.toUri
+import org.maplibre.spatialk.geojson.BoundingBox
+import org.maplibre.spatialk.geojson.Position
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -208,11 +208,11 @@ private fun Content(
   onOpenDrawer: () -> Unit,
   refresh: () -> Unit,
   loadMapThemes: () -> Unit,
-  loadBuiltFeatures: (Float, LatLngBounds?) -> Unit,
+  loadBuiltFeatures: (Float, BoundingBox?) -> Unit,
 ) {
   val scope = rememberCoroutineScope()
   val cameraState = rememberMapCameraState(
-    latLng = DEFAULT_CAMERA_LOCATION,
+    position = DEFAULT_CAMERA_LOCATION,
     zoom = DEFAULT_CAMERA_ZOOM,
   )
 
@@ -236,7 +236,7 @@ private fun Content(
     loadMapThemes()
   }
 
-  var viewport by remember { mutableStateOf<Pair<Float, LatLngBounds?>>(0f to null) }
+  var viewport by remember { mutableStateOf<Pair<Float, BoundingBox?>>(0f to null) }
   LaunchedEffect(selectedLayers, viewport) {
     delay(500) // debounce
     loadBuiltFeatures(viewport.first, viewport.second)
@@ -270,7 +270,7 @@ private fun Content(
     }
     scope.launch {
       lastLocation?.let { location ->
-        cameraState.animateTo(location.toLatLng(), 14f)
+        cameraState.animateTo(location.toPosition(), 14f)
       }
     }
     val offerPrecise = shouldOfferPreciseUpgrade(
@@ -297,8 +297,8 @@ private fun Content(
     cameraState = cameraState,
     contentPadding = contentPadding,
     mapTheme = selectedMapTheme,
-    onMapClick = { latLng ->
-      findFeatureAt(latLng, orderedFeatures)?.let { selectedZone = it }
+    onMapClick = { position ->
+      findFeatureAt(position, orderedFeatures)?.let { selectedZone = it }
     },
     onCameraIdle = { z, b -> viewport = z to b },
     additionalContent = {
@@ -412,7 +412,7 @@ private fun LocationPermissionDialog(
 }
 
 private fun findFeatureAt(
-  point: LatLng,
+  point: Position,
   features: List<MapFeature>,
   lineToleranceDeg: Double = 0.0005,
 ): MapFeature? {
@@ -430,28 +430,28 @@ private fun findFeatureAt(
   return null
 }
 
-private val LatLngConverter = TwoWayConverter<LatLng, AnimationVector2D>(
+private val PositionConverter = TwoWayConverter<Position, AnimationVector2D>(
   convertToVector = { AnimationVector2D(it.latitude.toFloat(), it.longitude.toFloat()) },
-  convertFromVector = { LatLng(it.v1.toDouble(), it.v2.toDouble()) },
+  convertFromVector = { Position(longitude = it.v2.toDouble(), latitude = it.v1.toDouble()) },
 )
 
 @Composable
 private fun UserLocation(location: Location?) {
   if (location == null) return
 
-  val latLngAnim = remember { Animatable(location.toLatLng(), LatLngConverter) }
+  val positionAnim = remember { Animatable(location.toPosition(), PositionConverter) }
   val radiusAnim = remember { Animatable(location.accuracy) }
 
   LaunchedEffect(location) {
-    val target = location.toLatLng()
+    val target = location.toPosition()
     // Short ease so the dot tracks the fix crisply (location updates arrive ~every 2s).
-    val spec = tween<LatLng>(durationMillis = 600, easing = LinearEasing)
+    val spec = tween<Position>(durationMillis = 600, easing = LinearEasing)
     val specF = tween<Float>(durationMillis = 600, easing = LinearEasing)
-    launch { latLngAnim.animateTo(target, spec) }
+    launch { positionAnim.animateTo(target, spec) }
     launch { radiusAnim.animateTo(location.accuracy, specF) }
   }
 
-  val center = latLngAnim.value
+  val center = positionAnim.value
   val accuracyRing = circlePolygon(center, radiusAnim.value.toDouble())
 
   val accuracySource = rememberGeoJsonSource(GeoJsonData.Features(polygonFeatureCollection(listOf(accuracyRing))))

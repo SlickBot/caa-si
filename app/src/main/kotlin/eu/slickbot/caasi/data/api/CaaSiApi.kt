@@ -14,7 +14,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.json.JSONObject
-import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.spatialk.geojson.BoundingBox
 import java.net.URLEncoder
 import javax.net.ssl.HostnameVerifier
 
@@ -64,7 +64,7 @@ class CaaSiApi(
 
     fun getLayerFeaturesResponse(
       layer: Layer,
-      bounds: LatLngBounds? = null,
+      bounds: BoundingBox? = null,
     ): LayerFeaturesResponse {
       val layerUrl = requireNotNull(layer.url) { "Layer '${layer.title}' has no URL" }
       //
@@ -97,10 +97,10 @@ class CaaSiApi(
           "resultRecordCount" to 5000,
           "maxRecordCountFactor" to 3,
           "geometry" to jsonString(
-            "xmin" to bounds.southWest.longitude,
-            "ymin" to bounds.southWest.latitude,
-            "xmax" to bounds.northEast.longitude,
-            "ymax" to bounds.northEast.latitude,
+            "xmin" to bounds.southwest.longitude,
+            "ymin" to bounds.southwest.latitude,
+            "xmax" to bounds.northeast.longitude,
+            "ymax" to bounds.northeast.latitude,
             "spatialReference" to mapOf(
               "wkid" to 4326
             )
@@ -109,10 +109,10 @@ class CaaSiApi(
             "mode" to "view",
             "originPosition" to "upperLeft",
             "extent" to mapOf(
-              "xmin" to bounds.southWest.longitude,
-              "ymin" to bounds.southWest.latitude,
-              "xmax" to bounds.northEast.longitude,
-              "ymax" to bounds.northEast.latitude,
+              "xmin" to bounds.southwest.longitude,
+              "ymin" to bounds.southwest.latitude,
+              "xmax" to bounds.northeast.longitude,
+              "ymax" to bounds.northeast.latitude,
               "spatialReference" to mapOf(
                 "wkid" to 4326
               )
@@ -136,7 +136,7 @@ class CaaSiApi(
       return requestString(url).parseJson()
     }
 
-  fun getLayerFeatures(layer: Layer, bounds: LatLngBounds? = null): List<LayerFeature> {
+  fun getLayerFeatures(layer: Layer, bounds: BoundingBox? = null): List<LayerFeature> {
     return getLayerFeaturesResponse(layer, bounds).features
   }
 

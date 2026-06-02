@@ -19,12 +19,12 @@ import eu.slickbot.caasi.data.prefs.MapTheme
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.compose.camera.CameraState
 import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.style.BaseStyle
 import org.maplibre.compose.util.ClickResult
+import org.maplibre.spatialk.geojson.BoundingBox
+import org.maplibre.spatialk.geojson.Position
 
 @OptIn(FlowPreview::class)
 @Composable
@@ -32,10 +32,10 @@ fun Map(
   modifier: Modifier = Modifier,
   mapTheme: MapTheme = MapTheme.SYSTEM,
   systemDarkTheme: Boolean = isSystemInDarkTheme(),
-  cameraState: CameraState = rememberMapCameraState(LatLng(0.0, 0.0), 0f),
+  cameraState: CameraState = rememberMapCameraState(Position(longitude = 0.0, latitude = 0.0), 0f),
   contentPadding: PaddingValues = PaddingValues(),
-  onMapClick: (LatLng) -> Unit = {},
-  onCameraIdle: (zoom: Float, bounds: LatLngBounds) -> Unit = { _, _ -> },
+  onMapClick: (Position) -> Unit = {},
+  onCameraIdle: (zoom: Float, bounds: BoundingBox) -> Unit = { _, _ -> },
   additionalContent: @Composable BoxScope.() -> Unit = {},
   mapContent: @Composable () -> Unit = {},
 ) {
@@ -56,7 +56,7 @@ fun Map(
       .debounce(200L)
       .collectLatest {
         val zoom = cameraState.position.zoom.toFloat()
-        val bounds = cameraState.projection?.queryVisibleBoundingBox()?.toLatLngBounds()
+        val bounds = cameraState.projection?.queryVisibleBoundingBox()
         if (bounds != null) currentOnCameraIdle(zoom, bounds)
       }
   }
@@ -69,7 +69,7 @@ fun Map(
       zoomRange = 3f..21f,
       options = options,
       onMapClick = { pos, _ ->
-        currentOnMapClick(pos.toLatLng())
+        currentOnMapClick(pos)
         ClickResult.Pass
       },
       content = { mapContent() },

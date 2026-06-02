@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.spatialk.geojson.BoundingBox
 
 class MapViewModel(
   private val repo: CaaSiRepository,
@@ -117,7 +117,7 @@ class MapViewModel(
     }
   }
 
-  fun loadBuiltFeatures(zoom: Float, bounds: LatLngBounds?) {
+  fun loadBuiltFeatures(zoom: Float, bounds: BoundingBox?) {
     featuresBuiltJob?.cancel()
     featuresBuiltJob = viewModelScope.launch {
       _isLoadingFeaturesBuilt.value = true

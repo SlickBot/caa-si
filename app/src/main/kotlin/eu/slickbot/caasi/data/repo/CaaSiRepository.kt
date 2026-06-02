@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.spatialk.geojson.BoundingBox
 
 class CaaSiRepository(
   private val api: CaaSiApi,
@@ -85,7 +85,7 @@ class CaaSiRepository(
 
   suspend fun getBuiltFeatures(
     layers: List<Layer>,
-    bounds: LatLngBounds?,
+    bounds: BoundingBox?,
     zoom: Float,
   ): List<MapFeature> = withContext(ioDispatcher) {
     if (zoom < LAYER_BUILT_ZOOM_THRESHOLD || bounds == null) {

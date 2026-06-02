@@ -7,7 +7,7 @@ import eu.slickbot.caasi.data.api.http.HttpException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.supervisorScope
-import org.maplibre.android.geometry.LatLng
+import org.maplibre.spatialk.geojson.Position
 import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -62,6 +62,6 @@ fun Throwable.toUserMessage(action: String): String = when (this) {
   else -> "$action: ${message ?: javaClass.simpleName}"
 }
 
-fun Location.toLatLng(): LatLng {
-  return LatLng(latitude, longitude)
+fun Location.toPosition(): Position {
+  return Position(longitude = longitude, latitude = latitude)
 }

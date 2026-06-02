@@ -4,36 +4,36 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.maplibre.android.geometry.LatLng
+import org.maplibre.spatialk.geojson.Position
 
 class GeoHitTestTest {
 
   private val square = listOf(
-    LatLng(0.0, 0.0),
-    LatLng(0.0, 2.0),
-    LatLng(2.0, 2.0),
-    LatLng(2.0, 0.0),
+    Position(longitude = 0.0, latitude = 0.0),
+    Position(longitude = 2.0, latitude = 0.0),
+    Position(longitude = 2.0, latitude = 2.0),
+    Position(longitude = 0.0, latitude = 2.0),
   )
 
   @Test
   fun pointInPolygon_trueForInteriorPoint() {
-    assertTrue(pointInPolygon(LatLng(1.0, 1.0), square))
+    assertTrue(pointInPolygon(Position(longitude = 1.0, latitude = 1.0), square))
   }
 
   @Test
   fun pointInPolygon_falseForExteriorPoint() {
-    assertFalse(pointInPolygon(LatLng(3.0, 3.0), square))
+    assertFalse(pointInPolygon(Position(longitude = 3.0, latitude = 3.0), square))
   }
 
   @Test
   fun distanceToPolyline_zeroWhenOnTheLine() {
-    val line = listOf(LatLng(0.0, 0.0), LatLng(0.0, 4.0))
-    assertEquals(0.0, distanceToPolyline(LatLng(0.0, 2.0), line), 1e-9)
+    val line = listOf(Position(longitude = 0.0, latitude = 0.0), Position(longitude = 4.0, latitude = 0.0))
+    assertEquals(0.0, distanceToPolyline(Position(longitude = 2.0, latitude = 0.0), line), 1e-9)
   }
 
   @Test
   fun distanceToPolyline_perpendicularOffset() {
-    val line = listOf(LatLng(0.0, 0.0), LatLng(0.0, 4.0))
-    assertEquals(1.0, distanceToPolyline(LatLng(1.0, 2.0), line), 1e-9)
+    val line = listOf(Position(longitude = 0.0, latitude = 0.0), Position(longitude = 4.0, latitude = 0.0))
+    assertEquals(1.0, distanceToPolyline(Position(longitude = 2.0, latitude = 1.0), line), 1e-9)
   }
 }
