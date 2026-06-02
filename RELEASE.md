@@ -16,14 +16,32 @@ keytool -genkeypair -v \
 ```bash
 # Encode the keystore and upload it as the KEYSTORE_BASE64 secret
 base64 -w0 release-key.jks | gh secret set KEYSTORE_BASE64
+```
 
+```bash
 # Key alias (must match the -alias used above)
 gh secret set KEY_ALIAS --body "key"
+```
 
+```bash
 # Passwords — gh prompts for the value.
-# Enter the SAME password for both.
 gh secret set KEYSTORE_PASSWORD
+```
+
+```bash
+# Enter the SAME password for both.
 gh secret set KEY_PASSWORD
+```
+
+### Build a signed release locally
+
+```bash
+export KEYSTORE_FILE=/path/to/release-key.jks
+export KEYSTORE_PASSWORD=...
+export KEY_ALIAS=...
+export KEY_PASSWORD=...
+
+./gradlew :app:assembleRelease
 ```
 
 ### Add release tag and push
